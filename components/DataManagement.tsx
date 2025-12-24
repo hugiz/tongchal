@@ -28,6 +28,11 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
     window.location.reload();
   };
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    alert('주소가 복사되었습니다! 선생님들께 전달해 주세요.');
+  };
+
   const handleExport = () => {
     const dataStr = JSON.stringify(state, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -55,34 +60,62 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
     };
   };
 
+  const isLocal = currentHostname.includes('localhost') || currentHostname.includes('127.0.0.1');
+
   return (
     <div className="space-y-8 pb-20">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">시스템 관리 및 배포</h2>
-          <p className="text-slate-500">인터넷 주소를 설정하고 클라우드 데이터를 연동합니다.</p>
+          <h2 className="text-2xl font-bold text-slate-800">시스템 관리 센터</h2>
+          <p className="text-slate-500">학원 주소와 클라우드 데이터를 통합 관리합니다.</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">현재 접속 주소</p>
-          <p className="text-sm font-mono font-bold text-indigo-600">{currentHostname}</p>
+        <div className="flex flex-col items-end">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">우리 학원 인터넷 주소</p>
+          <div className="flex items-center space-x-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100">
+            <span className="text-sm font-mono font-bold text-indigo-600">{currentHostname}</span>
+            <button 
+              onClick={() => copyToClipboard(currentHostname)}
+              className="text-indigo-400 hover:text-indigo-600 transition-colors"
+              title="주소 복사"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+            </button>
+          </div>
+          {isLocal && <p className="text-[10px] text-rose-500 mt-1 font-semibold">⚠️ 현재는 컴퓨터 내부 주소입니다. 외부 접속 불가.</p>}
         </div>
       </header>
+
+      {/* Deployment Checkbox List */}
+      <section className="bg-slate-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32"></div>
+        <h3 className="text-xl font-bold mb-6 flex items-center">
+          <span className="mr-2">🏁</span> 배포 후 최종 체크리스트
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+          <CheckItem label="Vercel Domains에서 https 주소 확인" checked={!isLocal} />
+          <CheckItem label="Vercel Settings에서 API_KEY 환경변수 등록" checked={false} />
+          <CheckItem label="Supabase URL & Key 설정 저장" checked={!!cloudUrl} />
+          <CheckItem label="선생님들께 주소 및 로그인 정보 공유" checked={false} />
+        </div>
+      </section>
 
       {/* Cloud Sync Section */}
       <section className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div className="mb-4 md:mb-0">
             <h3 className="text-xl font-bold flex items-center">
-              <span className="mr-2">⚡️</span> 1. 실시간 클라우드 연결 (Supabase)
+              <span className="mr-2">⚡️</span> 1. 실시간 클라우드 데이터 연결
             </h3>
-            <p className="text-indigo-100 text-sm mt-1">데이터베이스 주소를 입력하면 모든 PC에서 동기화됩니다.</p>
+            <p className="text-indigo-100 text-sm mt-1">데이터베이스 정보를 입력하면 모든 기기에서 실시간 동기화됩니다.</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-indigo-200 mb-1 uppercase tracking-wider">Project URL (주소)</label>
+              <label className="block text-xs font-bold text-indigo-200 mb-1 uppercase tracking-wider">Project URL</label>
               <input 
                 type="text" 
                 value={cloudUrl}
@@ -92,7 +125,7 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-indigo-200 mb-1 uppercase tracking-wider">Anon Key (비밀키)</label>
+              <label className="block text-xs font-bold text-indigo-200 mb-1 uppercase tracking-wider">Anon Key</label>
               <input 
                 type="password" 
                 value={cloudKey}
@@ -109,92 +142,52 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
             </button>
           </div>
 
-          <div className="bg-white/10 rounded-2xl p-6 border border-white/10 space-y-4">
+          <div className="bg-white/10 rounded-2xl p-6 border border-white/10 space-y-3">
             <h4 className="text-sm font-bold text-white flex items-center">
-              <span className="mr-2">🔍</span> 어디서 찾나요?
+              <span className="mr-2">🔍</span> 정보 찾는 법
             </h4>
-            <ol className="text-xs text-indigo-100 space-y-3 list-decimal pl-4">
-              <li><a href="https://supabase.com" target="_blank" className="underline font-bold text-white">Supabase 접속</a> 후 프로젝트 선택</li>
-              <li>좌측 하단 <b>Settings (톱니바퀴)</b> 클릭</li>
-              <li><b>API</b> 메뉴 클릭</li>
-              <li><b>Project URL</b>과 <b>anon public</b> 항목을 복사해서 붙여넣으세요.</li>
+            <ol className="text-xs text-indigo-100 space-y-2 list-decimal pl-4">
+              <li><b>Supabase</b> 프로젝트 접속</li>
+              <li><b>Project Settings (톱니바퀴)</b> 클릭</li>
+              <li><b>API</b> 메뉴 선택</li>
+              <li><b>Project URL</b>과 <b>anon</b> 키를 복사해 오세요.</li>
             </ol>
           </div>
         </div>
       </section>
 
-      {/* Public Deployment Guide */}
-      <section className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full -mr-16 -mt-16"></div>
-        
-        <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center relative z-10">
-          <span className="mr-2">🌐</span> 2. 나만의 인터넷 주소 생성 (Vercel)
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-          <div className="space-y-6">
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Vercel을 이용하면 <span className="font-bold text-indigo-600">https://우리교습소.vercel.app</span> 같은 주소를 무료로 만들 수 있습니다. 학원 밖에서도 접속하려면 이 과정이 필수입니다.
-            </p>
-            
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">1</div>
-                <p className="text-sm text-slate-700">GitHub에 코드를 업로드하세요.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">2</div>
-                <p className="text-sm text-slate-700">Vercel에서 해당 저장소를 불러와 <b>Deploy</b>를 누르세요.</p>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center text-xs flex-shrink-0">3</div>
-                <p className="text-sm text-slate-700">생성된 주소를 선생님들과 공유하세요.</p>
-              </div>
-            </div>
-
-            <a href="https://vercel.com/new" target="_blank" className="inline-block bg-slate-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-700 transition-all shadow-lg">
-              지금 주소 만들기 →
-            </a>
-          </div>
-
-          <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100">
-            <h4 className="text-sm font-bold text-amber-800 flex items-center mb-4">
-              <span className="mr-2">⚠️</span> 주의: AI 기능 활성화
-            </h4>
-            <p className="text-xs text-amber-700 leading-relaxed space-y-2">
-              인터넷 주소로 접속했을 때 AI 상담 요약 기능이 작동하게 하려면, Vercel 설정 창의 <b>Environment Variables</b> 메뉴에 다음 값을 추가해야 합니다:
-            </p>
-            <div className="mt-4 p-3 bg-white rounded-lg border border-amber-200 font-mono text-[10px] text-slate-600">
-              <b>Key:</b> API_KEY <br/>
-              <b>Value:</b> (원장님의 Gemini API 키)
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Manual Sync */}
+      {/* Backup Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
-          <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-2xl">📤</div>
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl">📤</div>
           <div className="flex-1">
-            <h4 className="font-bold text-slate-800">오프라인 백업</h4>
-            <p className="text-xs text-slate-500">현재 데이터를 파일로 내려받습니다.</p>
+            <h4 className="font-bold text-slate-800">전체 데이터 백업</h4>
+            <p className="text-xs text-slate-500">학생, 진도, 상담 기록을 파일로 저장합니다.</p>
           </div>
-          <button onClick={handleExport} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold">다운로드</button>
+          <button onClick={handleExport} className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-700">다운로드</button>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
-          <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-2xl">📥</div>
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl">📥</div>
           <div className="flex-1">
             <h4 className="font-bold text-slate-800">데이터 불러오기</h4>
-            <p className="text-xs text-slate-500">백업 파일을 업로드하여 복구합니다.</p>
+            <p className="text-xs text-slate-500">백업된 파일을 선택하여 데이터를 복구합니다.</p>
           </div>
           <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
-          <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold">파일 선택</button>
+          <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-700">파일 선택</button>
         </div>
       </div>
     </div>
   );
 };
+
+const CheckItem = ({ label, checked }: { label: string, checked: boolean }) => (
+  <div className="flex items-center space-x-3 bg-white/5 p-3 rounded-xl border border-white/10">
+    <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'}`}>
+      {checked && <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+    </div>
+    <span className={`text-sm ${checked ? 'text-white font-medium' : 'text-slate-400'}`}>{label}</span>
+  </div>
+);
 
 export default DataManagement;
