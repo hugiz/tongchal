@@ -1,6 +1,7 @@
 
 export type Role = 'DIRECTOR' | 'TEACHER';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE';
+export type ConsultationType = 'PHONE' | 'VISIT' | 'MESSAGE' | 'OTHER';
 
 export interface User {
   id: string;
@@ -22,7 +23,7 @@ export interface Student {
   grade: string;
   classId: string;
   workbooks: string[];
-  attendanceDays: string[]; // 추가: 등원 요일 ['월', '수', '금']
+  attendanceDays: string[];
 }
 
 export interface Class {
@@ -30,7 +31,7 @@ export interface Class {
   name: string;
   teacherId: string;
   workbooks: string[];
-  attendanceDays: string[]; // 추가: 반 기본 등원 요일
+  attendanceDays: string[];
 }
 
 export interface ProgressRecord {
@@ -49,11 +50,20 @@ export interface ConsultationRecord {
   date: string;
 }
 
+export interface ParentConsultationRecord {
+  id: string;
+  studentId: string;
+  type: ConsultationType;
+  content: string;
+  result: string;
+  date: string;
+}
+
 export interface AttendanceRecord {
   id: string;
   studentId: string;
   classId: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   status: AttendanceStatus;
 }
 
@@ -64,5 +74,6 @@ export interface AppState {
   workbooks: Workbook[];
   progress: ProgressRecord[];
   consultations: ConsultationRecord[];
+  parentConsultations: ParentConsultationRecord[];
   attendance: AttendanceRecord[];
 }

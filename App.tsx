@@ -25,24 +25,10 @@ const App: React.FC = () => {
       return {
         ...INITIAL_STATE,
         ...parsed,
-        users: parsed.users || INITIAL_STATE.users,
-        students: (parsed.students || []).map((s: any) => ({
-          ...s,
-          attendanceDays: s.attendanceDays || ['월', '수', '금'],
-          workbooks: s.workbooks || []
-        })),
-        classes: (parsed.classes || []).map((c: any) => ({
-          ...c,
-          attendanceDays: c.attendanceDays || ['월', '수', '금'],
-          workbooks: c.workbooks || []
-        })),
-        workbooks: parsed.workbooks || INITIAL_STATE.workbooks,
-        progress: parsed.progress || [],
-        consultations: parsed.consultations || [],
-        attendance: parsed.attendance || []
+        parentConsultations: parsed.parentConsultations || []
       };
     } catch (e) {
-      console.error("State parse error, fallback to INITIAL_STATE", e);
+      console.error("State parse error", e);
       return INITIAL_STATE;
     }
   });
@@ -180,7 +166,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* 모바일용 메뉴 버튼 - 미니멀한 SVG 디자인 */}
       {currentUser && (
         <button 
           onClick={() => setIsMenuOpen(true)}
@@ -194,7 +179,6 @@ const App: React.FC = () => {
 
       {currentUser && (
         <>
-          {/* 모바일 전용 배경 오버레이 */}
           {isMenuOpen && (
             <div 
               className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[50] md:hidden animate-in fade-in duration-300"
@@ -207,7 +191,6 @@ const App: React.FC = () => {
             md:static md:translate-x-0 md:h-screen md:w-60 md:shadow-xl
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
-            {/* 사이드바 내부 닫기 버튼 */}
             <button 
               onClick={() => setIsMenuOpen(false)}
               className="md:hidden absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:rotate-90"
@@ -227,9 +210,9 @@ const App: React.FC = () => {
               <div className="mt-4" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
             </div>
             
-            <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+            <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
               <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학원 관리</div>
+              <div className="pt-3 pb-1 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학원 관리</div>
               {isDirector && (
                 <>
                   <SidebarItem to="/teachers" icon="👩‍🏫" label="교사 관리" active={location.pathname === '/teachers'} onClick={() => setIsMenuOpen(false)} />
@@ -239,10 +222,10 @@ const App: React.FC = () => {
               <SidebarItem to="/students" icon="👥" label="학생 관리" active={location.pathname === '/students'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/workbooks" icon="📚" label="문제집 관리" active={location.pathname === '/workbooks'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/classes" icon="🏫" label="반 및 출석 관리" active={location.pathname === '/classes'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학습 기록</div>
+              <div className="pt-3 pb-1 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학습 기록</div>
               <SidebarItem to="/learning" icon="✍️" label="학습 현황 기록" active={location.pathname === '/learning'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/consultation" icon="📋" label="상담 일지" active={location.pathname === '/consultation'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">계정 설정</div>
+              <div className="pt-3 pb-1 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">계정 설정</div>
               <SidebarItem to="/account" icon="⚙️" label="내 정보 관리" active={location.pathname === '/account'} onClick={() => setIsMenuOpen(false)} />
             </nav>
 
@@ -254,7 +237,7 @@ const App: React.FC = () => {
                   {needsLabel && <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">{roleLabel}</p>}
                 </div>
               </div>
-              <button onClick={handleLogout} className="w-full py-2.5 bg-white/10 hover:bg-rose-500 rounded-xl text-[11px] font-black transition-all border border-white/5 flex items-center justify-center gap-2">
+              <button onClick={handleLogout} className="w-full py-2 bg-white/10 hover:bg-rose-500 rounded-xl text-[11px] font-black transition-all border border-white/5 flex items-center justify-center gap-2">
                 로그아웃
               </button>
             </div>
@@ -301,7 +284,7 @@ const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) =
 );
 
 const SidebarItem = ({ to, icon, label, active, onClick }: { to: string, icon: string, label: string, active: boolean, onClick: () => void }) => (
-  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all group ${active ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-900/20 font-black' : 'text-indigo-100 hover:bg-white/10 font-bold'}`}>
+  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-2 rounded-xl transition-all group ${active ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-900/20 font-black' : 'text-indigo-100 hover:bg-white/10 font-bold'}`}>
     <span className={`text-base transition-transform group-hover:scale-110 ${active ? 'filter-none' : 'filter-none'}`}>{icon}</span>
     <span className="tracking-tight text-xs md:text-sm">{label}</span>
   </Link>
