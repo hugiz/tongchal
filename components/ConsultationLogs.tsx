@@ -46,12 +46,26 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     if (!student) return;
 
     setIsSummarizing(sId);
-    const studentProgress = state.progress.filter(p => p.studentId === sId);
-    const studentConsultations = state.consultations.filter(c => c.studentId === sId);
     
-    const result = await generateConsultationSummary(student, studentProgress, state.workbooks, studentConsultations);
-    setSummary(prev => ({ ...prev, [sId]: result }));
-    setIsSummarizing(null);
+    try {
+      const studentProgress = state.progress.filter(p => p.studentId === sId);
+      const studentConsultations = state.consultations.filter(c => c.studentId === sId);
+      
+      const result = await generateConsultationSummary(
+        student, 
+        studentProgress, 
+        state.workbooks, 
+        studentConsultations
+      );
+      
+      setSummary(prev => ({ ...prev, [sId]: result }));
+    } catch (error) {
+      console.error("Summary generation error:", error);
+      alert("AI 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      // 성공하든 실패하든 로딩 상태는 반드시 해제하여 버튼을 다시 활성화함
+      setIsSummarizing(null);
+    }
   };
 
   return (
@@ -109,31 +123,43 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                   <button 
                     onClick={() => handleGenerateAISummary(student.id)}
                     disabled={isSummarizing === student.id}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all shadow-sm ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-semibold transition-all shadow-sm ${
                       isSummarizing === student.id 
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:opacity-90 active:scale-95'
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed animate-pulse' 
+                      : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:shadow-indigo-200 hover:shadow-lg active:scale-95'
                     }`}
                   >
-                    <span>✨ {isSummarizing === student.id ? '요약 중...' : '학부모 전송용 요약'}</span>
+                    {isSummarizing === student.id ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        작성 중...
+                      </>
+                    ) : (
+                      <span>✨ 학부모 전송용 요약</span>
+                    )}
                   </button>
                 </div>
 
                 <div className="p-6">
                   {summary[student.id] && (
-                    <div className="mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl relative">
-                      <h5 className="text-sm font-bold text-indigo-700 mb-2 flex items-center italic">
-                        <span className="mr-2">✨</span> AI 요약 브리핑
+                    <div className="mb-6 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl relative animate-in fade-in zoom-in duration-300">
+                      <h5 className="text-sm font-bold text-indigo-700 mb-3 flex items-center">
+                        <span className="mr-2 text-lg">✨</span> AI 학습 브리핑 (복사하여 전송하세요)
                       </h5>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{summary[student.id]}</p>
+                      <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-white/50 p-4 rounded-xl border border-indigo-50">
+                        {summary[student.id]}
+                      </div>
                       <button 
                         onClick={() => {
                           navigator.clipboard.writeText(summary[student.id]);
-                          alert('클립보드에 복사되었습니다.');
+                          alert('내용이 클립보드에 복사되었습니다! 카톡이나 문자에 붙여넣어 전송하세요.');
                         }}
-                        className="absolute top-4 right-4 text-xs text-indigo-500 hover:text-indigo-700 underline"
+                        className="mt-3 w-full py-2 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-200 transition-colors"
                       >
-                        복사하기
+                        문구 복사하기
                       </button>
                     </div>
                   )}
@@ -150,7 +176,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                         </div>
                       ))
                     ) : (
-                      <p className="text-center text-slate-400 py-8 text-sm italic">기록된 상담 내용이 없습니다.</p>
+                      <p className="text-center text-slate-400 py-8 text-sm italic">기록된 상담 내용이 없습니다. 먼저 왼쪽에서 일지를 작성해 주세요.</p>
                     )}
                   </div>
                 </div>
