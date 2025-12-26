@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { AppState, User, Student, AttendanceStatus, ProgressRecord, ConsultationRecord } from '../types';
+import { DAYS_OF_WEEK } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface DashboardProps {
@@ -12,13 +13,13 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const [activeActionClass, setActiveActionClass] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'LEARNING' | 'CONSULTATION'>('ATTENDANCE');
-  
-  // 학생별로 선택된 문제집 ID 관리
   const [selectedWorkbooks, setSelectedWorkbooks] = useState<{[key: string]: string}>({});
 
   const isDirector = user?.role === 'DIRECTOR';
-  const today = new Date().toISOString().split('T')[0];
-  
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const dayName = DAYS_OF_WEEK[now.getDay() === 0 ? 6 : now.getDay() - 1]; // 월(0)~일(6)
+
   const visibleClasses = isDirector 
     ? state.classes 
     : state.classes.filter(c => c.teacherId === user?.id);
@@ -26,6 +27,17 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const visibleClassIds = visibleClasses.map(c => c.id);
   const visibleStudents = state.students.filter(s => visibleClassIds.includes(s.classId));
   const visibleStudentIds = visibleStudents.map(s => s.id);
+
+  // 오늘 등원 예정 학생 명단
+  const expectedStudents = visibleStudents.filter(s => s.attendanceDays.includes(dayName));
+  const expectedCount = expectedStudents.length;
+
+  // 오늘 등원 완료 학생
+  const presentStudentsToday = state.attendance.filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId));
+  const presentCount = presentStudentsToday.length;
+
+  // 아직 안온 학생 (예정 명단 중 출석 기록이 없는 학생)
+  const missingStudents = expectedStudents.filter(s => !state.attendance.some(a => a.studentId === s.id && a.date === today));
 
   const gradeData = visibleStudents.reduce((acc: any[], s) => {
     const existing = acc.find(item => item.name === s.grade);
@@ -59,7 +71,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       alert('진행한 페이지 번호를 정확히 입력해 주세요.');
       return;
     }
-    
     const newProgress: ProgressRecord = { 
       id: 'p' + Date.now() + Math.random(), 
       studentId, 
@@ -67,7 +78,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       currentPage: page, 
       date: today 
     };
-    
     updateState(prev => ({ ...prev, progress: [...prev.progress, newProgress] }));
     alert('학습 기록이 저장되었습니다.');
   };
@@ -77,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {user?.name}님 👋</h2>
-          <p className="text-slate-500 text-sm">{isDirector ? '학원 운영 현황을 실시간으로 확인합니다.' : '오늘 수업을 준비하고 기록해 주세요.'}</p>
+          <p className="text-slate-500 text-sm">오늘은 <span className="text-indigo-600 font-bold">{dayName}요일</span> 수업입니다.</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
           <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>
@@ -88,7 +98,29 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title={isDirector ? "전체 원생" : "관리 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
         <StatCard title="담당 학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
-        <StatCard title="오늘 등원" value={state.attendance.filter(a => a.date === today && a.status === 'PRESENT' && visibleStudentIds.includes(a.studentId)).length} icon="✅" color="bg-amber-500" />
+        
+        {/* 오늘 등원 카드 (호버 시 미등원 명단) */}
+        <div className="group relative">
+          <StatCard 
+            title="오늘 등원" 
+            value={`${presentCount} / ${expectedCount}`} 
+            icon="✅" 
+            color="bg-amber-500" 
+          />
+          {missingStudents.length > 0 && (
+            <div className="absolute top-full left-0 mt-2 w-full z-30 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300">
+              <div className="bg-slate-800 text-white p-4 rounded-2xl shadow-2xl border border-slate-700">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">미등원 학생 명단</p>
+                <div className="flex flex-wrap gap-1">
+                  {missingStudents.map(s => (
+                    <span key={s.id} className="bg-slate-700 px-2 py-1 rounded-lg text-xs">{s.name}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         <StatCard title="미상담 누적" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
       </div>
 
@@ -98,11 +130,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
             <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
             학급별 빠른 업무 기록
           </h3>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleClasses.map(cls => {
               const classStudents = state.students.filter(s => s.classId === cls.id);
-              const presentCount = state.attendance.filter(a => a.classId === cls.id && a.date === today && a.status === 'PRESENT').length;
+              const presentCountClass = state.attendance.filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
+              const expectedCountClass = classStudents.filter(s => s.attendanceDays.includes(dayName)).length;
               const isSelected = activeActionClass === cls.id;
 
               return (
@@ -112,35 +144,18 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                       <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner font-bold text-indigo-600">{cls.name[0]}</div>
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-wider">
-                          {presentCount}/{classStudents.length} 등원 완료
+                          {presentCountClass}/{expectedCountClass} 등원 완료
                         </span>
                       </div>
                     </div>
                     <h4 className="font-bold text-slate-800 text-lg mb-1">{cls.name}</h4>
                     <p className="text-xs text-slate-400 mb-6 font-medium">담당 교사: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님</p>
-                    
                     <div className="grid grid-cols-3 gap-2">
-                      <button 
-                        onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }}
-                        className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        출석
-                      </button>
-                      <button 
-                        onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }}
-                        className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        학습
-                      </button>
-                      <button 
-                        onClick={() => { setActiveActionClass(isSelected && activeTab === 'CONSULTATION' ? null : cls.id); setActiveTab('CONSULTATION'); }}
-                        className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'CONSULTATION' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        상담
-                      </button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }} className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>출석</button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }} className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>학습</button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'CONSULTATION' ? null : cls.id); setActiveTab('CONSULTATION'); }} className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'CONSULTATION' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>상담</button>
                     </div>
                   </div>
-
                   {isSelected && (
                     <div className="border-t border-slate-50 p-5 bg-slate-50/40 animate-in slide-in-from-top duration-300">
                       <div className="space-y-3">
@@ -149,13 +164,15 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                           const classWorkbooks = state.workbooks.filter(w => studentClass?.workbooks.includes(w.id));
                           const individualWorkbooks = state.workbooks.filter(w => student.workbooks.includes(w.id));
                           const allAvailableWbs = [...classWorkbooks, ...individualWorkbooks];
-                          
                           const currentSelectedWbId = selectedWorkbooks[student.id] || (allAvailableWbs[0]?.id || '');
+                          const isExpected = student.attendanceDays.includes(dayName);
 
                           return (
-                            <div key={student.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm flex-wrap gap-2">
-                              <span className="text-sm font-bold text-slate-700 min-w-[70px]">{student.name}</span>
-                              
+                            <div key={student.id} className={`bg-white p-3 rounded-2xl border flex items-center justify-between shadow-sm flex-wrap gap-2 ${!isExpected ? 'opacity-60 grayscale' : 'border-slate-100'}`}>
+                              <div className="flex flex-col min-w-[70px]">
+                                <span className="text-sm font-bold text-slate-700">{student.name}</span>
+                                {!isExpected && <span className="text-[8px] text-slate-400 font-bold uppercase">비수업일</span>}
+                              </div>
                               {activeTab === 'ATTENDANCE' && (
                                 <div className="flex gap-1">
                                   {['PRESENT', 'LATE', 'ABSENT'].map(status => {
@@ -163,80 +180,24 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                                     const label = status === 'PRESENT' ? '출석' : status === 'LATE' ? '지각' : '결석';
                                     const activeColor = status === 'PRESENT' ? 'bg-emerald-500' : status === 'LATE' ? 'bg-amber-500' : 'bg-rose-500';
                                     return (
-                                      <button 
-                                        key={status}
-                                        onClick={() => handleAttendance(student.id, cls.id, status as AttendanceStatus)}
-                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${att?.status === status ? `${activeColor} text-white shadow-md scale-105` : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                                      >
-                                        {label}
-                                      </button>
+                                      <button key={status} onClick={() => handleAttendance(student.id, cls.id, status as AttendanceStatus)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${att?.status === status ? `${activeColor} text-white shadow-md scale-105` : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>{label}</button>
                                     );
                                   })}
                                 </div>
                               )}
-
                               {activeTab === 'LEARNING' && (
                                 <div className="flex items-center gap-2 flex-1 min-w-[200px] justify-end">
-                                  <select 
-                                    className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 outline-none max-w-[130px] truncate"
-                                    value={currentSelectedWbId}
-                                    onChange={(e) => setSelectedWorkbooks({...selectedWorkbooks, [student.id]: e.target.value})}
-                                  >
+                                  <select className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 outline-none max-w-[130px] truncate" value={currentSelectedWbId} onChange={(e) => setSelectedWorkbooks({...selectedWorkbooks, [student.id]: e.target.value})}>
                                     <option value="">교재 선택</option>
-                                    {classWorkbooks.length > 0 && (
-                                      <optgroup label="🏛️ 반 공통">
-                                        {classWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
-                                      </optgroup>
-                                    )}
-                                    {individualWorkbooks.length > 0 && (
-                                      <optgroup label="👤 개인 교재">
-                                        {individualWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
-                                      </optgroup>
-                                    )}
+                                    {classWorkbooks.length > 0 && <optgroup label="🏛️ 반 공통">{classWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}</optgroup>}
+                                    {individualWorkbooks.length > 0 && <optgroup label="👤 개인 교재">{individualWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}</optgroup>}
                                   </select>
-                                  <div className="flex items-center">
-                                    <input 
-                                      type="number" 
-                                      placeholder="P"
-                                      className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-right"
-                                      onKeyDown={(e) => {
-                                        if(e.key === 'Enter') {
-                                          handleUpdateProgress(student.id, currentSelectedWbId, e.currentTarget.value);
-                                          e.currentTarget.value = '';
-                                        }
-                                      }}
-                                    />
-                                    <button 
-                                      className="ml-1 p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                                      onClick={(e) => {
-                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                                        handleUpdateProgress(student.id, currentSelectedWbId, input.value);
-                                        input.value = '';
-                                      }}
-                                    >
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                      </svg>
-                                    </button>
-                                  </div>
+                                  <input type="number" placeholder="P" className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-right" onKeyDown={(e) => { if(e.key === 'Enter') { handleUpdateProgress(student.id, currentSelectedWbId, e.currentTarget.value); e.currentTarget.value = ''; } }} />
                                 </div>
                               )}
-
                               {activeTab === 'CONSULTATION' && (
                                 <div className="flex-1 ml-4">
-                                  <input 
-                                    type="text" 
-                                    placeholder="관찰 소견 입력 후 Enter"
-                                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-rose-500 font-medium"
-                                    onKeyDown={(e) => {
-                                      if(e.key === 'Enter' && e.currentTarget.value) {
-                                        const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today };
-                                        updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] }));
-                                        e.currentTarget.value = '';
-                                        alert(`${student.name} 학생의 관찰 기록을 저장했습니다.`);
-                                      }
-                                    }}
-                                  />
+                                  <input type="text" placeholder="관찰 소견 입력 후 Enter" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-rose-500 font-medium" onKeyDown={(e) => { if(e.key === 'Enter' && e.currentTarget.value) { const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today }; updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] })); e.currentTarget.value = ''; alert(`${student.name} 학생의 관찰 기록을 저장했습니다.`); } }} />
                                 </div>
                               )}
                             </div>
@@ -276,7 +237,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               )}
             </div>
           </div>
-
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h3 className="text-xs font-bold mb-4 text-slate-800 uppercase tracking-widest">최근 상담/관찰 기록</h3>
             <div className="space-y-4">
@@ -284,9 +244,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                 const student = state.students.find(s => s.id === c.studentId);
                 return (
                   <div key={c.id} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-50/50 border border-slate-50">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600">
-                      {student?.name[0]}
-                    </div>
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600">{student?.name[0]}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="text-xs font-bold text-slate-700 truncate">{student?.name}</h4>
@@ -308,8 +266,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   );
 };
 
-const StatCard = ({ title, value, icon, color }: { title: string, value: number, icon: string, color: string }) => (
-  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 hover:shadow-lg transition-all">
+const StatCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: string, color: string }) => (
+  <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 hover:shadow-lg transition-all cursor-default">
     <div className={`w-14 h-14 rounded-2xl ${color} text-white flex items-center justify-center text-2xl shadow-lg`}>
       {icon}
     </div>

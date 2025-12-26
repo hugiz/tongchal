@@ -22,6 +22,7 @@ export interface Student {
   grade: string;
   classId: string;
   workbooks: string[];
+  attendanceDays: string[]; // 추가: 등원 요일 ['월', '수', '금']
 }
 
 export interface Class {
@@ -29,6 +30,7 @@ export interface Class {
   name: string;
   teacherId: string;
   workbooks: string[];
+  attendanceDays: string[]; // 추가: 반 기본 등원 요일
 }
 
 export interface ProgressRecord {
@@ -62,5 +64,5 @@ export interface AppState {
   workbooks: Workbook[];
   progress: ProgressRecord[];
   consultations: ConsultationRecord[];
-  attendance: AttendanceRecord[]; // Added: attendance tracking
+  attendance: AttendanceRecord[];
 }
