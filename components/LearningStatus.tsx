@@ -48,6 +48,15 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
     alert('학습 진도가 업데이트 되었습니다.');
   };
 
+  const handleDeleteProgress = (id: string) => {
+    if (confirm('이 학습 기록을 삭제하시겠습니까?')) {
+      updateState(prev => ({
+        ...prev,
+        progress: prev.progress.filter(p => p.id !== id)
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header>
@@ -120,8 +129,9 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
         </div>
 
         <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-50">
+          <div className="p-6 border-b border-slate-50 flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-800">최근 업데이트된 진도</h3>
+            <span className="text-[10px] font-bold text-slate-400">Total {visibleProgress.length} records</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
@@ -131,10 +141,11 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                   <th className="px-6 py-4">교재명</th>
                   <th className="px-6 py-4">진척도</th>
                   <th className="px-6 py-4">구분</th>
+                  <th className="px-6 py-4 text-right">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {visibleProgress.slice().reverse().slice(0, 10).map(p => {
+                {visibleProgress.slice().reverse().slice(0, 15).map(p => {
                   const student = state.students.find(s => s.id === p.studentId);
                   const studentClass = state.classes.find(c => c.id === student?.classId);
                   const wb = state.workbooks.find(w => w.id === p.workbookId);
@@ -142,8 +153,13 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                   const isClassWb = studentClass?.workbooks.includes(p.workbookId);
                   
                   return (
-                    <tr key={p.id} className="hover:bg-indigo-50/20 transition-colors">
-                      <td className="px-6 py-5 font-bold text-slate-700">{student?.name}</td>
+                    <tr key={p.id} className="hover:bg-indigo-50/20 transition-colors group">
+                      <td className="px-6 py-5 font-bold text-slate-700">
+                        <div className="flex flex-col">
+                          <span>{student?.name}</span>
+                          <span className="text-[9px] text-slate-300 font-normal">{p.date}</span>
+                        </div>
+                      </td>
                       <td className="px-6 py-5 text-xs text-slate-500 font-medium">{wb?.title}</td>
                       <td className="px-6 py-5">
                         <div className="flex items-center space-x-3">
@@ -160,9 +176,27 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                           {isClassWb ? '반 공통' : '개인'}
                         </span>
                       </td>
+                      <td className="px-6 py-5 text-right">
+                        <button 
+                          onClick={() => handleDeleteProgress(p.id)}
+                          className="opacity-0 group-hover:opacity-100 p-2 rounded-xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
+                          title="기록 삭제"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
+                {visibleProgress.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-20 text-center text-slate-300 italic font-bold">
+                      아직 기록된 학습 진도가 없습니다.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
