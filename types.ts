@@ -2,6 +2,8 @@
 export type Role = 'DIRECTOR' | 'TEACHER';
 export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE';
 export type ConsultationType = 'PHONE' | 'VISIT' | 'MESSAGE' | 'OTHER';
+export type MakeupMethod = 'TEACHER' | 'CLINIC' | 'DIRECTOR_CLASS';
+export type MakeupStatus = 'PENDING' | 'COMPLETED';
 
 export interface User {
   id: string;
@@ -67,6 +69,16 @@ export interface AttendanceRecord {
   status: AttendanceStatus;
 }
 
+export interface MakeupRecord {
+  id: string;
+  studentId: string;
+  absentDate: string;
+  makeupDate: string;
+  method: MakeupMethod;
+  status: MakeupStatus;
+  note: string;
+}
+
 export interface AppState {
   users: User[];
   students: Student[];
@@ -76,4 +88,5 @@ export interface AppState {
   consultations: ConsultationRecord[];
   parentConsultations: ParentConsultationRecord[];
   attendance: AttendanceRecord[];
+  makeups: MakeupRecord[];
 }

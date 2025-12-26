@@ -13,6 +13,7 @@ import WorkbookManagement from './components/WorkbookManagement';
 import TeacherManagement from './components/TeacherManagement';
 import DataManagement from './components/DataManagement';
 import AccountSettings from './components/AccountSettings';
+import MakeupManagement from './components/MakeupManagement';
 import Login from './components/Login';
 
 const App: React.FC = () => {
@@ -25,7 +26,8 @@ const App: React.FC = () => {
       return {
         ...INITIAL_STATE,
         ...parsed,
-        parentConsultations: parsed.parentConsultations || []
+        parentConsultations: parsed.parentConsultations || [],
+        makeups: parsed.makeups || []
       };
     } catch (e) {
       console.error("State parse error", e);
@@ -222,6 +224,7 @@ const App: React.FC = () => {
               <SidebarItem to="/students" icon="👥" label="학생 관리" active={location.pathname === '/students'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/workbooks" icon="📚" label="문제집 관리" active={location.pathname === '/workbooks'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/classes" icon="🏫" label="반 및 출석 관리" active={location.pathname === '/classes'} onClick={() => setIsMenuOpen(false)} />
+              <SidebarItem to="/makeup" icon="🩹" label="보강 관리" active={location.pathname === '/makeup'} onClick={() => setIsMenuOpen(false)} />
               <div className="pt-3 pb-1 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학습 기록</div>
               <SidebarItem to="/learning" icon="✍️" label="학습 현황 기록" active={location.pathname === '/learning'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/consultation" icon="📋" label="상담 일지" active={location.pathname === '/consultation'} onClick={() => setIsMenuOpen(false)} />
@@ -263,6 +266,7 @@ const App: React.FC = () => {
           <Route path="/sync" element={<DataManagement state={state} updateState={setFullState} cloudStatus={cloudStatus} cloudError={cloudError} onRefresh={refreshFromCloud} />} />
           <Route path="/workbooks" element={<WorkbookManagement state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/classes" element={<ClassManagement state={state} updateState={updateState} user={currentUser} />} />
+          <Route path="/makeup" element={<MakeupManagement state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/learning" element={<LearningStatus state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/consultation" element={<ConsultationLogs state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/account" element={<AccountSettings currentUser={currentUser} setCurrentUser={setCurrentUser} updateState={updateState} />} />

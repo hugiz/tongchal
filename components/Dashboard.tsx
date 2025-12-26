@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AppState, User, Student, AttendanceStatus, ProgressRecord, ConsultationRecord } from '../types';
+import { AppState, User, Student, AttendanceStatus, ProgressRecord, ConsultationRecord, MakeupRecord } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -33,6 +33,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
 
   const presentStudentsToday = (state.attendance || []).filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId));
   const presentCount = presentStudentsToday.length;
+
+  // 오늘 보강 학생
+  const makeupsToday = (state.makeups || []).filter(m => m.makeupDate === today && visibleStudentIds.includes(m.studentId));
 
   const missingStudents = expectedStudents.filter(s => !(state.attendance || []).some(a => a.studentId === s.id && a.date === today));
 
@@ -100,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
         <StatCard title={isDirector ? "전체 원생" : "담당 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-600" />
         <StatCard title="담당 학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-600" />
         <StatCard title="오늘 등원" value={`${presentCount} / ${expectedCount}`} icon="✅" color="bg-amber-500" />
-        <StatCard title="상담 및 특이사항" value={(state.consultations || []).filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
+        <StatCard title="오늘 보강" value={makeupsToday.length} icon="🩹" color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -124,7 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               const isClassToday = (cls.attendanceDays || []).includes(dayName);
 
               return (
-                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50/80 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
+                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-5">
                       <div className="relative">
@@ -204,6 +207,33 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
         </div>
 
         <div className="lg:col-span-4 space-y-8">
+          {/* 오늘 보강 현황판 */}
+          <div className="bg-indigo-50 p-8 rounded-[40px] border border-indigo-100 shadow-sm">
+            <h3 className="text-xs font-black mb-6 text-indigo-600 uppercase tracking-widest flex items-center justify-between">
+              오늘의 보강 명단
+              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded-lg text-[9px]">{makeupsToday.length}명</span>
+            </h3>
+            <div className="space-y-3">
+              {makeupsToday.map(m => {
+                const s = state.students.find(student => student.id === m.studentId);
+                return (
+                  <div key={m.id} className="bg-white p-4 rounded-2xl border border-indigo-200 flex items-center justify-between shadow-sm">
+                    <div>
+                      <p className="text-sm font-black text-slate-800">{s?.name}</p>
+                      <p className="text-[9px] text-indigo-400 font-black uppercase">{m.method === 'TEACHER' ? '담임' : m.method === 'CLINIC' ? '클리닉' : '원장'}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-lg text-[9px] font-black ${m.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                      {m.status === 'COMPLETED' ? '완료' : '대기'}
+                    </span>
+                  </div>
+                );
+              })}
+              {makeupsToday.length === 0 && (
+                <p className="text-[11px] text-slate-400 italic text-center py-4 font-bold">오늘 예정된 보강이 없습니다.</p>
+              )}
+            </div>
+          </div>
+
           <div className="bg-white p-8 rounded-[40px] shadow-xl border border-slate-50">
             <h3 className="text-xs font-black mb-8 text-slate-400 uppercase tracking-widest">학년 분포 현황</h3>
             <div className="h-56">
@@ -224,23 +254,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-300 italic text-xs font-black">DATA NOT FOUND</div>
               )}
-            </div>
-          </div>
-          <div className="bg-slate-900 p-8 rounded-[40px] text-white">
-            <h3 className="text-xs font-black mb-6 text-indigo-400 uppercase tracking-widest">최근 관찰 로그</h3>
-            <div className="space-y-4">
-              {(state.consultations || []).filter(c => visibleStudentIds.includes(c.studentId)).slice(-3).reverse().map((c) => {
-                const student = state.students.find(s => s.id === c.studentId);
-                return (
-                  <div key={c.id} className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="text-xs font-black text-indigo-200">{student?.name}</h4>
-                      <span className="text-[9px] text-slate-500">{c.date}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed font-medium">{c.note}</p>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>
