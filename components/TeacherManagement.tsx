@@ -19,7 +19,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
     if (!name || !password) return;
 
     if (state.users.some(u => u.username === name)) {
-      alert('이미 동일한 아이디(이름)의 선생님이 등록되어 있습니다.');
+      alert('이미 동일한 성함의 선생님이 등록되어 있습니다.');
       return;
     }
 
@@ -64,20 +64,14 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
   const startEdit = (teacher: User) => {
     setEditingTeacher(teacher);
     setName(teacher.name);
-    setPassword(''); // 비밀번호는 보안상 빈 값으로 시작 (입력 시에만 변경)
+    setPassword(''); 
     setIsAdding(false);
   };
 
-  const handleDeleteTeacher = (id: string, teacherName: string) => {
-    if (confirm(`${teacherName} 선생님의 계정을 삭제하시겠습니까?`)) {
-      updateState(prev => ({
-        ...prev,
-        users: prev.users.filter(u => u.id !== id),
-        classes: prev.classes.map(c => 
-          c.teacherId === id ? { ...c, teacherId: '' } : c
-        )
-      }));
-    }
+  const handleCopyInfo = (teacher: User) => {
+    const text = `[EduLog 로그인 정보]\n성함: ${teacher.name}\n아이디: ${teacher.username}\n비밀번호: ${teacher.password}`;
+    navigator.clipboard.writeText(text);
+    alert('선생님 로그인 정보가 복사되었습니다. 카톡으로 전달해 주세요!');
   };
 
   const handleCopyInviteLink = () => {
@@ -108,7 +102,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
         <div className="flex space-x-2">
           <button 
             onClick={handleCopyInviteLink}
-            className="bg-emerald-500 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-emerald-600 transition-all flex items-center space-x-2"
+            className="bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-emerald-600 transition-all flex items-center space-x-2"
           >
             <span>✉️ 초대 링크 복사</span>
           </button>
@@ -119,7 +113,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
               setName('');
               setPassword('');
             }}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-indigo-700 transition-all"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700 transition-all"
           >
             {isAdding ? '닫기' : '새 선생님 등록'}
           </button>
@@ -136,7 +130,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1">성함</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">성함 (아이디로 사용됨)</label>
               <input 
                 type="text" 
                 value={name}
@@ -179,33 +173,48 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {teachers.map(teacher => (
-          <div key={teacher.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between group">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg">
-                {teacher.name[0]}
+          <div key={teacher.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                  {teacher.name[0]}
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800">{teacher.name} 선생님</h4>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">ID: {teacher.username}</p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-bold text-slate-800">{teacher.name} 선생님</h4>
-                <p className="text-xs text-slate-400">ID: {teacher.username}</p>
+              <div className="flex space-x-1">
+                <button 
+                  onClick={() => startEdit(teacher)}
+                  className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-all">
+            
+            <div className="flex gap-2">
               <button 
-                onClick={() => startEdit(teacher)}
-                className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg"
-                title="수정"
+                onClick={() => handleCopyInfo(teacher)}
+                className="flex-1 py-2 bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 text-[10px] font-bold rounded-lg border border-slate-100 transition-all flex items-center justify-center gap-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
+                <span>📋 계정정보 복사</span>
               </button>
               <button 
-                onClick={() => handleDeleteTeacher(teacher.id, teacher.name)}
-                className="p-2 text-rose-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg"
-                title="삭제"
+                onClick={() => {
+                  if(confirm(`${teacher.name} 선생님을 삭제하시겠습니까?`)) {
+                    updateState(prev => ({
+                      ...prev,
+                      users: prev.users.filter(u => u.id !== teacher.id)
+                    }));
+                  }
+                }}
+                className="px-3 py-2 bg-slate-50 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-lg border border-slate-100 transition-all"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>

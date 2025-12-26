@@ -8,10 +8,11 @@ export const generateConsultationSummary = async (
   workbooks: Workbook[],
   consultations: ConsultationRecord[]
 ): Promise<string> => {
+  // Vercel 등 배포 환경에서는 process.env.API_KEY가 설정되어 있어야 합니다.
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey.length < 5) {
-    throw new Error("API_KEY_NOT_FOUND");
+  if (!apiKey || apiKey === "undefined") {
+    throw new Error("API_KEY_NOT_CONFIGURED");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -25,37 +26,38 @@ export const generateConsultationSummary = async (
 
   const recentNotes = consultations.length > 0
     ? consultations.slice(-5).map(c => `• [${c.date}] ${c.note}`).join('\n')
-    : "특이사항 기록 없음";
-
-  // AI에게 줄 데이터와 함께 '출력 양식'을 강제로 지정합니다.
-  const userPrompt = `
-    [학생 정보]
-    성명: ${student.name}
-    학년: ${student.grade}
-
-    [학습 데이터]
-    ${progressText}
-
-    [선생님 관찰 메모]
-    ${recentNotes}
-
-    ---
-    위 데이터를 바탕으로 아래 [지정 양식]에 맞춰 학부모님께 보낼 알림톡 문구를 작성하세요.
-    항목명을 대괄호[]로 감싸고 내용을 작성하세요.
-  `;
+    : "최근 기록된 관찰 소견이 없습니다.";
 
   const systemInstruction = `
-    당신은 교육 전문 상담 가이드입니다. 반드시 아래의 '4단계 고정 양식'을 지켜서 한국어로 답변하세요.
-    
-    [지정 양식]:
-    1. [🌟 오늘 학습 요약]: 전체적인 학습 태도와 성취도를 다정하게 한 줄로 요약합니다.
-    2. [📚 상세 진도 현황]: 진행된 문제집과 페이지 정보를 일목요연하게 나열합니다.
-    3. [✍️ 선생님 관찰 소견]: 관찰 메모를 바탕으로 아이의 강점이나 보완점을 전문적으로 분석합니다.
-    4. [🌸 학부모님께 드리는 말씀]: 가정에서의 격려 부탁과 따뜻한 끝인사를 전합니다.
+    당신은 학원 학부모님께 학생의 학습 현황을 보고하는 전문 상담 실장입니다.
+    반드시 다음의 [출력 규칙]과 [고정 양식]을 한 글자도 틀리지 말고 지키세요.
 
-    - 말투: ~해요, ~입니다 등 다정하고 정중한 '원장님' 말투
-    - 이모지: 각 항목에 어울리는 이모지를 적절히 사용
-    - 금지사항: 양식 외의 불필요한 서론(네, 알겠습니다 등)은 절대 쓰지 마세요.
+    [출력 규칙]
+    1. 서론이나 결론(예: "알겠습니다", "작성해 드릴게요")을 절대 포함하지 마세요.
+    2. 오직 아래의 4가지 섹션만 출력하세요.
+    3. 말투는 '원장님'처럼 정중하고 다정하며 신뢰감 있는 '해요체'를 사용하세요.
+
+    [고정 양식]
+    [🌟 오늘 학습 요약]
+    (오늘 학생의 전체적인 학습 태도와 몰입도를 칭찬을 담아 한 문장으로 작성)
+
+    [📚 상세 진도 현황]
+    (진도 데이터를 바탕으로 완료된 페이지 정보를 나열)
+
+    [✍️ 선생님 관찰 소견]
+    (관찰 메모를 분석하여 학생의 인지적 성취나 정서적 특징을 전문적으로 설명)
+
+    [🌸 학부모님께 드리는 말씀]
+    (가정에서의 응원 부탁과 함께 따뜻한 마무리 인사)
+  `;
+
+  const userPrompt = `
+    학생 성명: ${student.name}
+    학년: ${student.grade}
+    오늘의 진도 상황:
+    ${progressText}
+    선생님의 기록:
+    ${recentNotes}
   `;
 
   try {
@@ -64,19 +66,15 @@ export const generateConsultationSummary = async (
       contents: [{ parts: [{ text: userPrompt }] }],
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.6, // 창의성보다 일관성을 위해 약간 낮춤
+        temperature: 0.3,
+        topP: 0.8,
       }
     });
     
     if (!response.text) throw new Error("AI_EMPTY_RESPONSE");
     return response.text.trim();
   } catch (error: any) {
-    const msg = error.message || "";
-    console.error("Gemini Service Error:", msg);
-
-    if (msg.includes("Paid Project") || msg.includes("billing") || msg.includes("403")) {
-      throw new Error("BILLING_REQUIRED");
-    }
+    console.error("Gemini API Error:", error);
     throw error;
   }
 };
