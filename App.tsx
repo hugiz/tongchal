@@ -180,7 +180,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* 모바일용 메뉴 버튼 - 미니멀한 SVG 디자인으로 개선 */}
+      {/* 모바일용 메뉴 버튼 - 미니멀한 SVG 디자인 */}
       {currentUser && (
         <button 
           onClick={() => setIsMenuOpen(true)}
@@ -203,33 +203,33 @@ const App: React.FC = () => {
           )}
 
           <aside className={`
-            fixed inset-y-0 left-0 z-[60] w-72 bg-indigo-700 text-white flex flex-col shadow-2xl transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
-            md:static md:translate-x-0 md:h-screen md:w-64 md:shadow-xl
+            fixed inset-y-0 left-0 z-[60] w-64 bg-indigo-700 text-white flex flex-col shadow-2xl transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+            md:static md:translate-x-0 md:h-screen md:w-60 md:shadow-xl
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
-            {/* 사이드바 내부 닫기 버튼 - 스타일 개선 */}
+            {/* 사이드바 내부 닫기 버튼 */}
             <button 
               onClick={() => setIsMenuOpen(false)}
-              className="md:hidden absolute top-6 right-6 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl transition-all active:rotate-90"
+              className="md:hidden absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl transition-all active:rotate-90"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
-            <div className="p-8 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                  <span className="text-indigo-700 font-black text-lg">T</span>
+            <div className="p-7 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
+                  <span className="text-indigo-700 font-black text-sm">T</span>
                 </div>
-                <h1 className="text-2xl font-black tracking-tight italic">EduLog</h1>
+                <h1 className="text-xl font-black tracking-tight">통찰Edulog</h1>
               </div>
               <div className="mt-4" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
             </div>
             
-            <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
+            <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
               <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">학원 관리</div>
+              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학원 관리</div>
               {isDirector && (
                 <>
                   <SidebarItem to="/teachers" icon="👩‍🏫" label="교사 관리" active={location.pathname === '/teachers'} onClick={() => setIsMenuOpen(false)} />
@@ -239,23 +239,23 @@ const App: React.FC = () => {
               <SidebarItem to="/students" icon="👥" label="학생 관리" active={location.pathname === '/students'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/workbooks" icon="📚" label="문제집 관리" active={location.pathname === '/workbooks'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/classes" icon="🏫" label="반 및 출석 관리" active={location.pathname === '/classes'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">학습 기록</div>
+              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학습 기록</div>
               <SidebarItem to="/learning" icon="✍️" label="학습 현황 기록" active={location.pathname === '/learning'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/consultation" icon="📋" label="상담 일지" active={location.pathname === '/consultation'} onClick={() => setIsMenuOpen(false)} />
-              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">계정 설정</div>
+              <div className="pt-3 pb-1.5 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">계정 설정</div>
               <SidebarItem to="/account" icon="⚙️" label="내 정보 관리" active={location.pathname === '/account'} onClick={() => setIsMenuOpen(false)} />
             </nav>
 
-            <div className="p-6 border-t border-indigo-600 bg-indigo-800/40">
-              <div className="flex items-center space-x-3 mb-5">
-                <div className="w-11 h-11 rounded-2xl bg-indigo-400 border border-indigo-300/30 flex items-center justify-center font-black text-white shadow-lg">{sidebarName?.[0] || 'U'}</div>
+            <div className="p-5 border-t border-indigo-600 bg-indigo-800/40">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-400 border border-indigo-300/30 flex items-center justify-center font-black text-white shadow-lg">{sidebarName?.[0] || 'U'}</div>
                 <div className="overflow-hidden">
                   <p className="text-sm font-black truncate leading-tight">{sidebarName}</p>
                   {needsLabel && <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">{roleLabel}</p>}
                 </div>
               </div>
-              <button onClick={handleLogout} className="w-full py-3 bg-white/10 hover:bg-rose-500 rounded-xl text-xs font-black transition-all border border-white/5 flex items-center justify-center gap-2">
-                <span>🚪</span> 로그아웃
+              <button onClick={handleLogout} className="w-full py-2.5 bg-white/10 hover:bg-rose-500 rounded-xl text-[11px] font-black transition-all border border-white/5 flex items-center justify-center gap-2">
+                로그아웃
               </button>
             </div>
           </aside>
@@ -290,20 +290,20 @@ const App: React.FC = () => {
 };
 
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
-  <div className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-[10px] font-black transition-all border ${
+  <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-2xl text-[9px] font-black transition-all border ${
     status === 'LIVE' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20 shadow-lg shadow-emerald-500/10' : 
     status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-300 border-amber-400/20 animate-pulse' : 
     'bg-rose-500/10 text-rose-300 border-rose-400/20'
   }`}>
-    <span className={`w-2 h-2 rounded-full ${status === 'LIVE' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : status === 'CONNECTING' ? 'bg-amber-400' : 'bg-rose-400'}`}></span>
-    <span className="tracking-tight uppercase">{status === 'LIVE' ? 'Cloud Synchronized' : status === 'CONNECTING' ? 'Syncing...' : 'Local Only'}</span>
+    <span className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : status === 'CONNECTING' ? 'bg-amber-400' : 'bg-rose-400'}`}></span>
+    <span className="tracking-tight uppercase">{status === 'LIVE' ? 'Cloud Live' : status === 'CONNECTING' ? 'Syncing...' : 'Local'}</span>
   </div>
 );
 
 const SidebarItem = ({ to, icon, label, active, onClick }: { to: string, icon: string, label: string, active: boolean, onClick: () => void }) => (
-  <Link to={to} onClick={onClick} className={`flex items-center space-x-3.5 px-5 py-3.5 rounded-2xl transition-all group ${active ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-900/20 font-black' : 'text-indigo-100 hover:bg-white/10 font-bold'}`}>
-    <span className={`text-lg transition-transform group-hover:scale-125 ${active ? 'filter-none' : 'filter-none'}`}>{icon}</span>
-    <span className="tracking-tight">{label}</span>
+  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all group ${active ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-900/20 font-black' : 'text-indigo-100 hover:bg-white/10 font-bold'}`}>
+    <span className={`text-base transition-transform group-hover:scale-110 ${active ? 'filter-none' : 'filter-none'}`}>{icon}</span>
+    <span className="tracking-tight text-xs md:text-sm">{label}</span>
   </Link>
 );
 

@@ -79,7 +79,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     alert('학습 기록이 저장되었습니다.');
   };
 
-  // 인사말 호칭 로직 수정
   const greetingName = isDirector 
     ? "원장님" 
     : `${user?.name || '선생'}${user?.name?.endsWith('님') || user?.name?.endsWith('선생님') ? '' : ' 선생님'}`;
@@ -89,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight">안녕하세요, {greetingName} 👋</h2>
-          <p className="text-slate-500 font-medium mt-1">{isDirector ? "통찰수학학원의 전체 현황을 브리핑합니다." : "담당하고 계신 반의 오늘의 현황입니다."}</p>
+          <p className="text-slate-500 font-medium mt-1">{isDirector ? "학원 전체 현황을 브리핑합니다." : "담당하고 계신 반의 오늘의 현황입니다."}</p>
         </div>
         <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r pr-3 border-slate-100">Today</span>
@@ -135,7 +134,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               학급별 업무 관리
             </h3>
             <div className="text-[11px] font-bold text-slate-400 flex items-center gap-2">
-               <span className="w-2 h-2 rounded-full bg-indigo-100"></span> 오늘 수업이 있는 반 강조됨
+               <span className="w-2 h-2 rounded-full bg-amber-200 border border-amber-300"></span> 오늘 수업 반 강조
             </div>
           </div>
           
@@ -146,21 +145,20 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               const expectedCountClass = classStudents.filter(s => (s.attendanceDays || []).includes(dayName)).length;
               const isSelected = activeActionClass === cls.id;
               
-              // 오늘 수업 여부 확인
               const isClassToday = (cls.attendanceDays || []).includes(dayName);
 
               return (
-                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-8 ring-indigo-50' : isClassToday ? 'border-indigo-100 bg-indigo-50/40 shadow-sm' : 'border-slate-100 hover:shadow-xl hover:-translate-y-1'}`}>
+                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-8 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50/70 shadow-md' : 'border-slate-100 hover:shadow-xl hover:-translate-y-1'}`}>
                   {isClassToday && !isSelected && (
-                    <div className="absolute top-4 right-5 z-10">
-                       <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg shadow-indigo-200 animate-pulse">✨ 오늘 수업</span>
+                    <div className="absolute top-16 left-6 z-10">
+                       <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-lg shadow-lg shadow-amber-200">✨ 오늘 수업</span>
                     </div>
                   )}
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-5">
                       <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-xl font-black transition-all ${isClassToday ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-50 text-indigo-400 shadow-slate-100'}`}>{cls.name[0]}</div>
                       <div className="text-right">
-                        <span className={`text-[10px] font-black px-2.5 py-1.5 rounded-xl uppercase tracking-wider ${isClassToday ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className={`text-[10px] font-black px-2.5 py-1.5 rounded-xl uppercase tracking-wider ${isClassToday ? 'bg-white/80 text-amber-700 border border-amber-200 shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
                           {presentCountClass}/{expectedCountClass} 등원
                         </span>
                       </div>
@@ -171,9 +169,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                        담당: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님
                     </p>
                     <div className="grid grid-cols-3 gap-2.5 relative z-10">
-                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50'}`}>출석</button>
-                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50'}`}>학습</button>
-                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'CONSULTATION' ? null : cls.id); setActiveTab('CONSULTATION'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'CONSULTATION' ? 'bg-rose-600 text-white shadow-xl shadow-rose-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50'}`}>상담</button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 shadow-sm'}`}>출석</button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 shadow-sm'}`}>학습</button>
+                      <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'CONSULTATION' ? null : cls.id); setActiveTab('CONSULTATION'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'CONSULTATION' ? 'bg-rose-600 text-white shadow-xl shadow-rose-200 scale-105' : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 shadow-sm'}`}>상담</button>
                     </div>
                   </div>
                   {isSelected && (
