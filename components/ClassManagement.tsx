@@ -33,7 +33,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       attendanceDays: selectedDays
     };
 
-    updateState(prev => ({ ...prev, classes: [...prev.classes, newClass] }));
+    updateState(prev => ({ ...prev, classes: [...(prev.classes || []), newClass] }));
     setNewClassName('');
     setSelectedWorkbookIds([]);
     setSelectedDays(['월', '수', '금']);
@@ -43,12 +43,13 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleUpdateClassDays = (classId: string, day: string) => {
     updateState(prev => ({
       ...prev,
-      classes: prev.classes.map(c => {
+      classes: (prev.classes || []).map(c => {
         if (c.id !== classId) return c;
-        const exists = c.attendanceDays.includes(day);
+        const currentDays = c.attendanceDays || [];
+        const exists = currentDays.includes(day);
         return {
           ...c,
-          attendanceDays: exists ? c.attendanceDays.filter(d => d !== day) : [...c.attendanceDays, day]
+          attendanceDays: exists ? currentDays.filter(d => d !== day) : [...currentDays, day]
         };
       })
     }));
@@ -60,8 +61,8 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
   const handleAttendance = (studentId: string, classId: string, status: AttendanceStatus) => {
     updateState(prev => {
-      const existingIndex = prev.attendance.findIndex(a => a.studentId === studentId && a.date === today);
-      const newAttendance = [...prev.attendance];
+      const existingIndex = (prev.attendance || []).findIndex(a => a.studentId === studentId && a.date === today);
+      const newAttendance = [...(prev.attendance || [])];
       if (existingIndex > -1) {
         newAttendance[existingIndex] = { ...newAttendance[existingIndex], status };
       } else {
@@ -71,7 +72,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
     });
   };
 
-  const teachers = state.users.filter(u => u.role === 'TEACHER' || u.role === 'DIRECTOR');
+  const teachers = (state.users || []).filter(u => u.role === 'TEACHER' || u.role === 'DIRECTOR');
 
   return (
     <div className="space-y-6 pb-10">
@@ -108,21 +109,22 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        {state.classes.map(cls => {
+        {(state.classes || []).map(cls => {
           const isExpanded = expandedClassId === cls.id;
-          const classStudents = state.students.filter(s => s.classId === cls.id);
-          const presentCount = state.attendance.filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
+          const classStudents = (state.students || []).filter(s => s.classId === cls.id);
+          const presentCount = (state.attendance || []).filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
+          const attendanceDays = cls.attendanceDays || [];
 
           return (
             <div key={cls.id} className={`bg-white rounded-3xl shadow-sm border transition-all overflow-hidden ${isExpanded ? 'border-indigo-400 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100'}`}>
               <div className="p-6 flex flex-col md:flex-row md:items-center justify-between cursor-pointer" onClick={() => setExpandedClassId(isExpanded ? null : cls.id)}>
                 <div className="flex items-center space-x-5">
-                  <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-black shadow-inner">{cls.name[0]}</div>
+                  <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-black shadow-inner">{cls.name?.[0] || 'C'}</div>
                   <div>
                     <h4 className="text-xl font-black text-slate-800">{cls.name}</h4>
                     <div className="flex gap-1 mt-1">
                       {DAYS_OF_WEEK.map(day => (
-                        <span key={day} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${cls.attendanceDays.includes(day) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>{day}</span>
+                        <span key={day} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${attendanceDays.includes(day) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>{day}</span>
                       ))}
                     </div>
                   </div>
@@ -141,7 +143,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">DAILY ATTENDANCE LOG</h5>
                       <div className="space-y-2">
                         {classStudents.map(student => {
-                          const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
+                          const att = (state.attendance || []).find(a => a.studentId === student.id && a.date === today);
                           return (
                             <div key={student.id} className="p-3 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
                               <span className="text-xs font-bold text-slate-700">{student.name}</span>
@@ -160,7 +162,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">CLASS DAYS SETTINGS</h5>
                         <div className="flex gap-2">
                           {DAYS_OF_WEEK.map(day => (
-                            <button key={day} onClick={() => handleUpdateClassDays(cls.id, day)} className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${cls.attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-400'}`}>{day}</button>
+                            <button key={day} onClick={() => handleUpdateClassDays(cls.id, day)} className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-400'}`}>{day}</button>
                           ))}
                         </div>
                       </div>

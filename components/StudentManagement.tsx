@@ -34,12 +34,12 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       grade: formData.grade,
       classId: formData.classId,
       workbooks: formData.workbookIds,
-      attendanceDays: studentClass ? [...studentClass.attendanceDays] : ['월', '수', '금'] // 반 요일을 기본값으로
+      attendanceDays: studentClass ? [...(studentClass.attendanceDays || [])] : ['월', '수', '금']
     };
 
     updateState(prev => ({
       ...prev,
-      students: [...prev.students, newStudent]
+      students: [...(prev.students || []), newStudent]
     }));
     setIsAdding(false);
     setFormData({ name: '', grade: GRADES[0], classId: state.classes[0]?.id || '', workbookIds: [] });
@@ -49,10 +49,10 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     const studentClass = state.classes.find(c => c.id === newClassId);
     updateState(prev => ({
       ...prev,
-      students: prev.students.map(s => s.id === studentId ? { 
+      students: (prev.students || []).map(s => s.id === studentId ? { 
         ...s, 
         classId: newClassId, 
-        attendanceDays: studentClass ? [...studentClass.attendanceDays] : s.attendanceDays 
+        attendanceDays: studentClass ? [...(studentClass.attendanceDays || [])] : (s.attendanceDays || [])
       } : s)
     }));
   };
@@ -60,21 +60,22 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleGradeChange = (studentId: string, newGrade: string) => {
     updateState(prev => ({
       ...prev,
-      students: prev.students.map(s => s.id === studentId ? { ...s, grade: newGrade } : s)
+      students: (prev.students || []).map(s => s.id === studentId ? { ...s, grade: newGrade } : s)
     }));
   };
 
   const handleToggleDay = (studentId: string, day: string) => {
     updateState(prev => ({
       ...prev,
-      students: prev.students.map(s => {
+      students: (prev.students || []).map(s => {
         if (s.id !== studentId) return s;
-        const exists = s.attendanceDays.includes(day);
+        const currentDays = s.attendanceDays || [];
+        const exists = currentDays.includes(day);
         return {
           ...s,
           attendanceDays: exists 
-            ? s.attendanceDays.filter(d => d !== day) 
-            : [...s.attendanceDays, day]
+            ? currentDays.filter(d => d !== day) 
+            : [...currentDays, day]
         };
       })
     }));
@@ -83,14 +84,15 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleToggleIndividualWorkbook = (studentId: string, workbookId: string) => {
     updateState(prev => ({
       ...prev,
-      students: prev.students.map(s => {
+      students: (prev.students || []).map(s => {
         if (s.id !== studentId) return s;
-        const exists = s.workbooks.includes(workbookId);
+        const currentWbs = s.workbooks || [];
+        const exists = currentWbs.includes(workbookId);
         return {
           ...s,
           workbooks: exists 
-            ? s.workbooks.filter(id => id !== workbookId)
-            : [...s.workbooks, workbookId]
+            ? currentWbs.filter(id => id !== workbookId)
+            : [...currentWbs, workbookId]
         };
       })
     }));
@@ -100,22 +102,21 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     if (confirm('정말로 이 학생을 삭제하시겠습니까?')) {
       updateState(prev => ({
         ...prev,
-        students: prev.students.filter(s => s.id !== id),
-        progress: prev.progress.filter(p => p.studentId !== id),
-        consultations: prev.consultations.filter(c => c.studentId !== id),
+        students: (prev.students || []).filter(s => s.id !== id),
+        progress: (prev.progress || []).filter(p => p.studentId !== id),
+        consultations: (prev.consultations || []).filter(c => c.studentId !== id),
       }));
     }
   };
 
   const filteredStudents = filterGrade === '전체' 
-    ? state.students 
-    : state.students.filter(s => s.grade === filterGrade);
+    ? (state.students || []) 
+    : (state.students || []).filter(s => s.grade === filterGrade);
 
-  // 최근 30일 결석 횟수 계산
   const getAbsenceCount = (studentId: string) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return state.attendance.filter(a => 
+    return (state.attendance || []).filter(a => 
       a.studentId === studentId && 
       a.status === 'ABSENT' && 
       new Date(a.date) >= thirtyDaysAgo
@@ -185,12 +186,13 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 const classWorkbooks = studentClass?.workbooks || [];
                 const individualWorkbooks = student.workbooks || [];
                 const absenceCount = getAbsenceCount(student.id);
+                const attendanceDays = student.attendanceDays || [];
                 
                 return (
                   <tr key={student.id} className="hover:bg-indigo-50/20 transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm">{student.name[0]}</div>
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm">{student.name?.[0] || 'S'}</div>
                         <span className="font-bold text-slate-800">{student.name}</span>
                       </div>
                     </td>
@@ -207,7 +209,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                     <td className="px-8 py-6">
                       <div className="flex gap-1">
                         {DAYS_OF_WEEK.map(day => (
-                          <button key={day} onClick={() => handleToggleDay(student.id, day)} className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all ${student.attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-50 text-slate-300 hover:bg-slate-100'}`}>
+                          <button key={day} onClick={() => handleToggleDay(student.id, day)} className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-50 text-slate-300 hover:bg-slate-100'}`}>
                             {day}
                           </button>
                         ))}

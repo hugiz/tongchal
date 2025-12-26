@@ -22,10 +22,11 @@ const App: React.FC = () => {
     
     try {
       const parsed = JSON.parse(saved);
-      // 데이터 마이그레이션: 누락된 필드 보완
+      // 데이터 마이그레이션: 구버전 데이터에 필수 필드 강제 주입
       return {
         ...INITIAL_STATE,
         ...parsed,
+        users: parsed.users || INITIAL_STATE.users,
         students: (parsed.students || []).map((s: any) => ({
           ...s,
           attendanceDays: s.attendanceDays || ['월', '수', '금'],
@@ -36,9 +37,13 @@ const App: React.FC = () => {
           attendanceDays: c.attendanceDays || ['월', '수', '금'],
           workbooks: c.workbooks || []
         })),
+        workbooks: parsed.workbooks || INITIAL_STATE.workbooks,
+        progress: parsed.progress || [],
+        consultations: parsed.consultations || [],
         attendance: parsed.attendance || []
       };
     } catch (e) {
+      console.error("State parse error, fallback to INITIAL_STATE", e);
       return INITIAL_STATE;
     }
   });
