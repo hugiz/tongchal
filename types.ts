@@ -79,6 +79,13 @@ export interface MakeupRecord {
   note: string;
 }
 
+export interface BriefingRecord {
+  id: string;
+  studentId: string;
+  content: string;
+  date: string;
+}
+
 export interface AppState {
   users: User[];
   students: Student[];
@@ -89,4 +96,5 @@ export interface AppState {
   parentConsultations: ParentConsultationRecord[];
   attendance: AttendanceRecord[];
   makeups: MakeupRecord[];
+  briefings: BriefingRecord[];
 }

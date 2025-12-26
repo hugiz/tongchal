@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { AppState, User, Student, AttendanceStatus, ProgressRecord, ConsultationRecord, MakeupRecord } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { AppState, User, Student, AttendanceStatus, ProgressRecord, ConsultationRecord, MakeupRecord, BriefingRecord } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -15,6 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'LEARNING' | 'CONSULTATION'>('ATTENDANCE');
   const [selectedWorkbooks, setSelectedWorkbooks] = useState<{[key: string]: string}>({});
 
+  const navigate = useNavigate();
   const isDirector = user?.role === 'DIRECTOR';
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -37,7 +39,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   // 오늘 보강 학생
   const makeupsToday = (state.makeups || []).filter(m => m.makeupDate === today && visibleStudentIds.includes(m.studentId));
 
-  const missingStudents = expectedStudents.filter(s => !(state.attendance || []).some(a => a.studentId === s.id && a.date === today));
+  // 최근 상담 브리핑 (최대 3개)
+  const recentBriefings = (state.briefings || [])
+    .filter(b => visibleStudentIds.includes(b.studentId))
+    .slice(0, 3);
 
   const gradeData = visibleStudents.reduce((acc: any[], s) => {
     const existing = acc.find(item => item.name === s.grade);
@@ -232,6 +237,36 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               })}
               {makeupsToday.length === 0 && (
                 <p className="text-[11px] text-slate-400 italic text-center py-4 font-bold">오늘 예정된 보강이 없습니다.</p>
+              )}
+            </div>
+          </div>
+
+          {/* 최근 상담 브리핑 (New) */}
+          <div className="bg-violet-50 p-8 rounded-[40px] border border-violet-100 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <span className="text-4xl">✨</span>
+            </div>
+            <h3 className="text-xs font-black mb-6 text-violet-600 uppercase tracking-widest flex items-center justify-between">
+              최근 AI 상담 브리핑
+              <button onClick={() => navigate('/consultation')} className="text-[9px] bg-violet-600 text-white px-2 py-0.5 rounded-lg hover:bg-violet-700 transition-colors">전체보기</button>
+            </h3>
+            <div className="space-y-3">
+              {recentBriefings.map(b => {
+                const s = state.students.find(student => student.id === b.studentId);
+                return (
+                  <div key={b.id} className="bg-white p-4 rounded-2xl border border-violet-200 shadow-sm hover:shadow-md transition-all cursor-pointer" onClick={() => navigate('/consultation')}>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <p className="text-sm font-black text-slate-800">{s?.name}</p>
+                      <span className="text-[9px] text-slate-400 font-bold">{b.date}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed font-medium">
+                      {b.content.replace(/#|1\.|2\.|3\./g, '').slice(0, 100)}...
+                    </p>
+                  </div>
+                );
+              })}
+              {recentBriefings.length === 0 && (
+                <p className="text-[11px] text-slate-400 italic text-center py-4 font-bold">생성된 AI 브리핑이 없습니다.</p>
               )}
             </div>
           </div>

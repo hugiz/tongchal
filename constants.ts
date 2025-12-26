@@ -28,6 +28,7 @@ export const INITIAL_STATE: AppState = {
   parentConsultations: [],
   attendance: [],
   makeups: [],
+  briefings: [],
 };
 
 export const GRADES = [

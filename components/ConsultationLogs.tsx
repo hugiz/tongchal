@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { AppState, User, ConsultationRecord, ParentConsultationRecord, ConsultationType } from '../types';
+import { AppState, User, ConsultationRecord, ParentConsultationRecord, ConsultationType, BriefingRecord } from '../types';
 import { generateConsultationSummary } from '../services/geminiService';
 
 interface Props {
@@ -19,7 +19,6 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   
   // AI 요약 상태
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
-  const [summary, setSummary] = useState<{[key: string]: string}>({});
   const [isKeyValid, setIsKeyValid] = useState(true);
 
   // 학부모 상담 폼 상태
@@ -62,7 +61,19 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       const studentProgress = state.progress.filter(p => p.studentId === sId);
       const studentConsultations = state.consultations.filter(c => c.studentId === sId);
       const result = await generateConsultationSummary(student, studentProgress, state.workbooks, studentConsultations);
-      setSummary(prev => ({ ...prev, [sId]: result }));
+      
+      const newBriefing: BriefingRecord = {
+        id: 'br' + Date.now(),
+        studentId: sId,
+        content: result,
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      updateState(prev => ({
+        ...prev,
+        briefings: [newBriefing, ...(prev.briefings || []).filter(b => b.studentId !== sId)].slice(0, 50)
+      }));
+
     } catch (error: any) {
       if (error.message === "INVALID_API_KEY" || error.message === "API_KEY_MISSING") {
         setIsKeyValid(false);
@@ -166,6 +177,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
 
   const teacherClasses = isDirector ? state.classes : state.classes.filter(c => c.teacherId === user?.id);
   const myStudents = state.students.filter(s => teacherClasses.map(c => c.id).includes(s.classId));
+  const currentBriefing = state.briefings?.find(b => b.studentId === activeStudentId);
 
   return (
     <div className="space-y-6">
@@ -234,13 +246,13 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                       </div>
                     </form>
 
-                    {summary[activeStudentId] && (
+                    {currentBriefing && (
                       <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800">
                         <div className="flex justify-between items-center mb-4">
-                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI 분석 보고서</p>
-                          <button onClick={() => handleCopyToKakao(state.students.find(s=>s.id===activeStudentId)?.name || '', summary[activeStudentId])} className="text-[10px] font-black text-white bg-indigo-600 px-3 py-1.5 rounded-lg">📋 카톡 복사</button>
+                          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">AI 분석 보고서 ({currentBriefing.date})</p>
+                          <button onClick={() => handleCopyToKakao(state.students.find(s=>s.id===activeStudentId)?.name || '', currentBriefing.content)} className="text-[10px] font-black text-white bg-indigo-600 px-3 py-1.5 rounded-lg">📋 카톡 복사</button>
                         </div>
-                        <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">{summary[activeStudentId]}</div>
+                        <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap font-medium">{currentBriefing.content}</div>
                       </div>
                     )}
 

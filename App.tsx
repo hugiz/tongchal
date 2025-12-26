@@ -27,7 +27,8 @@ const App: React.FC = () => {
         ...INITIAL_STATE,
         ...parsed,
         parentConsultations: parsed.parentConsultations || [],
-        makeups: parsed.makeups || []
+        makeups: parsed.makeups || [],
+        briefings: parsed.briefings || []
       };
     } catch (e) {
       console.error("State parse error", e);
