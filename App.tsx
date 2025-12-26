@@ -18,7 +18,29 @@ import Login from './components/Login';
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('edulog_state');
-    return saved ? JSON.parse(saved) : INITIAL_STATE;
+    if (!saved) return INITIAL_STATE;
+    
+    try {
+      const parsed = JSON.parse(saved);
+      // 데이터 마이그레이션: 누락된 필드 보완
+      return {
+        ...INITIAL_STATE,
+        ...parsed,
+        students: (parsed.students || []).map((s: any) => ({
+          ...s,
+          attendanceDays: s.attendanceDays || ['월', '수', '금'],
+          workbooks: s.workbooks || []
+        })),
+        classes: (parsed.classes || []).map((c: any) => ({
+          ...c,
+          attendanceDays: c.attendanceDays || ['월', '수', '금'],
+          workbooks: c.workbooks || []
+        })),
+        attendance: parsed.attendance || []
+      };
+    } catch (e) {
+      return INITIAL_STATE;
+    }
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -133,6 +155,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+      <button 
+        onClick={() => setIsMenuOpen(!isMenuOpen)}
+        className="md:hidden fixed top-4 right-4 z-[60] bg-indigo-600 text-white p-2 rounded-xl shadow-lg"
+      >
+        {isMenuOpen ? '✕' : '☰'}
+      </button>
+
       {currentUser && (
         <aside className={`
           fixed inset-y-0 left-0 z-50 w-64 bg-indigo-700 text-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
@@ -162,7 +191,7 @@ const App: React.FC = () => {
 
           <div className="p-4 border-t border-indigo-600 bg-indigo-800/50">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white">{currentUser.name[0]}</div>
+              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white uppercase">{currentUser.name?.[0] || 'U'}</div>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">{currentUser.name}</p>
                 <p className="text-[10px] text-indigo-300 uppercase">{currentUser.role === 'DIRECTOR' ? '원장님' : '선생님'}</p>
@@ -173,7 +202,7 @@ const App: React.FC = () => {
         </aside>
       )}
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
         {cloudError && <div className="mb-6 p-4 bg-rose-50 text-rose-700 text-sm rounded-2xl border border-rose-200">⚠️ {cloudError}</div>}
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} users={state.users} />} />

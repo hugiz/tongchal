@@ -21,23 +21,23 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const dayName = DAYS_OF_WEEK[now.getDay() === 0 ? 6 : now.getDay() - 1]; // 월(0)~일(6)
 
   const visibleClasses = isDirector 
-    ? state.classes 
-    : state.classes.filter(c => c.teacherId === user?.id);
+    ? (state.classes || []) 
+    : (state.classes || []).filter(c => c.teacherId === user?.id);
   
   const visibleClassIds = visibleClasses.map(c => c.id);
-  const visibleStudents = state.students.filter(s => visibleClassIds.includes(s.classId));
+  const visibleStudents = (state.students || []).filter(s => visibleClassIds.includes(s.classId));
   const visibleStudentIds = visibleStudents.map(s => s.id);
 
-  // 오늘 등원 예정 학생 명단
-  const expectedStudents = visibleStudents.filter(s => s.attendanceDays.includes(dayName));
+  // 오늘 등원 예정 학생 명단 (방어 코드 추가)
+  const expectedStudents = visibleStudents.filter(s => (s.attendanceDays || []).includes(dayName));
   const expectedCount = expectedStudents.length;
 
   // 오늘 등원 완료 학생
-  const presentStudentsToday = state.attendance.filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId));
+  const presentStudentsToday = (state.attendance || []).filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId));
   const presentCount = presentStudentsToday.length;
 
   // 아직 안온 학생 (예정 명단 중 출석 기록이 없는 학생)
-  const missingStudents = expectedStudents.filter(s => !state.attendance.some(a => a.studentId === s.id && a.date === today));
+  const missingStudents = expectedStudents.filter(s => !(state.attendance || []).some(a => a.studentId === s.id && a.date === today));
 
   const gradeData = visibleStudents.reduce((acc: any[], s) => {
     const existing = acc.find(item => item.name === s.grade);
@@ -50,8 +50,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
 
   const handleAttendance = (studentId: string, classId: string, status: AttendanceStatus) => {
     updateState(prev => {
-      const existingIdx = prev.attendance.findIndex(a => a.studentId === studentId && a.date === today);
-      const newAttendance = [...prev.attendance];
+      const existingIdx = (prev.attendance || []).findIndex(a => a.studentId === studentId && a.date === today);
+      const newAttendance = [...(prev.attendance || [])];
       if (existingIdx > -1) {
         newAttendance[existingIdx] = { ...newAttendance[existingIdx], status };
       } else {
@@ -78,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       currentPage: page, 
       date: today 
     };
-    updateState(prev => ({ ...prev, progress: [...prev.progress, newProgress] }));
+    updateState(prev => ({ ...prev, progress: [...(prev.progress || []), newProgress] }));
     alert('학습 기록이 저장되었습니다.');
   };
 
@@ -99,7 +99,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
         <StatCard title={isDirector ? "전체 원생" : "관리 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
         <StatCard title="담당 학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
         
-        {/* 오늘 등원 카드 (호버 시 미등원 명단) */}
         <div className="group relative">
           <StatCard 
             title="오늘 등원" 
@@ -121,7 +120,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           )}
         </div>
 
-        <StatCard title="미상담 누적" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
+        <StatCard title="미상담 누적" value={visibleStudents.length - (state.consultations || []).filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -132,9 +131,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleClasses.map(cls => {
-              const classStudents = state.students.filter(s => s.classId === cls.id);
-              const presentCountClass = state.attendance.filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
-              const expectedCountClass = classStudents.filter(s => s.attendanceDays.includes(dayName)).length;
+              const classStudents = visibleStudents.filter(s => s.classId === cls.id);
+              const presentCountClass = (state.attendance || []).filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
+              const expectedCountClass = classStudents.filter(s => (s.attendanceDays || []).includes(dayName)).length;
               const isSelected = activeActionClass === cls.id;
 
               return (
@@ -161,11 +160,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                       <div className="space-y-3">
                         {classStudents.map(student => {
                           const studentClass = state.classes.find(c => c.id === student.classId);
-                          const classWorkbooks = state.workbooks.filter(w => studentClass?.workbooks.includes(w.id));
-                          const individualWorkbooks = state.workbooks.filter(w => student.workbooks.includes(w.id));
+                          const classWorkbooks = state.workbooks.filter(w => (studentClass?.workbooks || []).includes(w.id));
+                          const individualWorkbooks = state.workbooks.filter(w => (student.workbooks || []).includes(w.id));
                           const allAvailableWbs = [...classWorkbooks, ...individualWorkbooks];
                           const currentSelectedWbId = selectedWorkbooks[student.id] || (allAvailableWbs[0]?.id || '');
-                          const isExpected = student.attendanceDays.includes(dayName);
+                          const isExpected = (student.attendanceDays || []).includes(dayName);
 
                           return (
                             <div key={student.id} className={`bg-white p-3 rounded-2xl border flex items-center justify-between shadow-sm flex-wrap gap-2 ${!isExpected ? 'opacity-60 grayscale' : 'border-slate-100'}`}>
@@ -176,7 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                               {activeTab === 'ATTENDANCE' && (
                                 <div className="flex gap-1">
                                   {['PRESENT', 'LATE', 'ABSENT'].map(status => {
-                                    const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
+                                    const att = (state.attendance || []).find(a => a.studentId === student.id && a.date === today);
                                     const label = status === 'PRESENT' ? '출석' : status === 'LATE' ? '지각' : '결석';
                                     const activeColor = status === 'PRESENT' ? 'bg-emerald-500' : status === 'LATE' ? 'bg-amber-500' : 'bg-rose-500';
                                     return (
@@ -197,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                               )}
                               {activeTab === 'CONSULTATION' && (
                                 <div className="flex-1 ml-4">
-                                  <input type="text" placeholder="관찰 소견 입력 후 Enter" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-rose-500 font-medium" onKeyDown={(e) => { if(e.key === 'Enter' && e.currentTarget.value) { const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today }; updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] })); e.currentTarget.value = ''; alert(`${student.name} 학생의 관찰 기록을 저장했습니다.`); } }} />
+                                  <input type="text" placeholder="관찰 소견 입력 후 Enter" className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-rose-500 font-medium" onKeyDown={(e) => { if(e.key === 'Enter' && e.currentTarget.value) { const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today }; updateState(prev => ({ ...prev, consultations: [...(prev.consultations || []), newCons] })); e.currentTarget.value = ''; alert(`${student.name} 학생의 관찰 기록을 저장했습니다.`); } }} />
                                 </div>
                               )}
                             </div>
@@ -240,11 +239,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h3 className="text-xs font-bold mb-4 text-slate-800 uppercase tracking-widest">최근 상담/관찰 기록</h3>
             <div className="space-y-4">
-              {state.consultations.filter(c => visibleStudentIds.includes(c.studentId)).slice(-3).reverse().map((c) => {
+              {(state.consultations || []).filter(c => visibleStudentIds.includes(c.studentId)).slice(-3).reverse().map((c) => {
                 const student = state.students.find(s => s.id === c.studentId);
                 return (
                   <div key={c.id} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-50/50 border border-slate-50">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600">{student?.name[0]}</div>
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600">{student?.name?.[0] || 'S'}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center mb-1">
                         <h4 className="text-xs font-bold text-slate-700 truncate">{student?.name}</h4>
@@ -255,7 +254,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                   </div>
                 );
               })}
-              {state.consultations.filter(c => visibleStudentIds.includes(c.studentId)).length === 0 && (
+              {(state.consultations || []).filter(c => visibleStudentIds.includes(c.studentId)).length === 0 && (
                 <p className="text-center text-[10px] text-slate-400 py-10 italic">기록된 상담 내역이 없습니다.</p>
               )}
             </div>
