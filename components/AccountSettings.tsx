@@ -22,13 +22,11 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
     setError('');
     setSuccess('');
 
-    // 1. 현재 비밀번호 확인
     if (currentUser.password !== currentPw) {
       setError('현재 비밀번호가 일치하지 않습니다.');
       return;
     }
 
-    // 2. 새 비밀번호 확인
     if (newPw !== confirmPw) {
       setError('새 비밀번호와 비밀번호 확인이 일치하지 않습니다.');
       return;
@@ -39,7 +37,6 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
       return;
     }
 
-    // 3. 상태 업데이트
     updateState(prev => {
       const updatedUsers = prev.users.map(u => 
         u.id === currentUser.id ? { ...u, password: newPw } : u
@@ -47,7 +44,6 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
       return { ...prev, users: updatedUsers };
     });
 
-    // 4. 현재 세션 유저 정보도 업데이트
     setCurrentUser({ ...currentUser, password: newPw });
 
     setSuccess('비밀번호가 성공적으로 변경되었습니다.');
@@ -55,6 +51,11 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
     setNewPw('');
     setConfirmPw('');
   };
+
+  // 프로필 타이틀 생성 로직 (원장님 원장님 방지)
+  const name = currentUser.name || '';
+  const roleTitle = currentUser.role === 'DIRECTOR' ? '원장님' : '선생님';
+  const profileTitle = name.includes(roleTitle) ? name : `${name} ${roleTitle}`;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -66,10 +67,10 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
       <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center space-x-6 mb-8 pb-8 border-b border-slate-50">
           <div className="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-indigo-100">
-            {currentUser.name[0]}
+            {name[0] || 'U'}
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-800">{currentUser.name} {currentUser.role === 'DIRECTOR' ? '원장님' : '선생님'}</h3>
+            <h3 className="text-xl font-bold text-slate-800">{profileTitle}</h3>
             <p className="text-slate-400">아이디: {currentUser.username}</p>
           </div>
         </div>

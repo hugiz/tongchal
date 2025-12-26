@@ -22,7 +22,6 @@ const App: React.FC = () => {
     
     try {
       const parsed = JSON.parse(saved);
-      // 데이터 마이그레이션: 구버전 데이터에 필수 필드 강제 주입
       return {
         ...INITIAL_STATE,
         ...parsed,
@@ -158,6 +157,10 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} users={state.users} />;
   }
 
+  // 사이드바용 직함 텍스트 결정 (원장님 원장님 방지)
+  const roleLabel = currentUser?.role === 'DIRECTOR' ? '원장님' : '선생님';
+  const showRoleLabel = currentUser?.name && !currentUser.name.includes(roleLabel);
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
       <button 
@@ -199,7 +202,7 @@ const App: React.FC = () => {
               <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white uppercase">{currentUser.name?.[0] || 'U'}</div>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">{currentUser.name}</p>
-                <p className="text-[10px] text-indigo-300 uppercase">{currentUser.role === 'DIRECTOR' ? '원장님' : '선생님'}</p>
+                {showRoleLabel && <p className="text-[10px] text-indigo-300 uppercase">{roleLabel}</p>}
               </div>
             </div>
             <button onClick={handleLogout} className="w-full py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-xs font-bold transition-all">로그아웃</button>

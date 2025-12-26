@@ -28,15 +28,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const visibleStudents = (state.students || []).filter(s => visibleClassIds.includes(s.classId));
   const visibleStudentIds = visibleStudents.map(s => s.id);
 
-  // 오늘 등원 예정 학생 명단 (방어 코드 추가)
   const expectedStudents = visibleStudents.filter(s => (s.attendanceDays || []).includes(dayName));
   const expectedCount = expectedStudents.length;
 
-  // 오늘 등원 완료 학생
   const presentStudentsToday = (state.attendance || []).filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId));
   const presentCount = presentStudentsToday.length;
 
-  // 아직 안온 학생 (예정 명단 중 출석 기록이 없는 학생)
   const missingStudents = expectedStudents.filter(s => !(state.attendance || []).some(a => a.studentId === s.id && a.date === today));
 
   const gradeData = visibleStudents.reduce((acc: any[], s) => {
@@ -82,11 +79,15 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     alert('학습 기록이 저장되었습니다.');
   };
 
+  // 호칭 중복 방지 로직 (예: 원장님님 방지)
+  const displayName = user?.name || '';
+  const greetingName = displayName.endsWith('님') ? displayName : `${displayName}님`;
+
   return (
     <div className="space-y-8 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {user?.name}님 👋</h2>
+          <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {greetingName} 👋</h2>
           <p className="text-slate-500 text-sm">오늘은 <span className="text-indigo-600 font-bold">{dayName}요일</span> 수업입니다.</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
