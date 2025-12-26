@@ -46,6 +46,15 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
     setIsAdding(false);
   };
 
+  const handleUpdateClassTeacher = (classId: string, teacherId: string) => {
+    updateState(prev => ({
+      ...prev,
+      classes: (prev.classes || []).map(c => 
+        c.id === classId ? { ...c, teacherId } : c
+      )
+    }));
+  };
+
   const handleUpdateClassDays = (classId: string, day: string) => {
     updateState(prev => ({
       ...prev,
@@ -104,7 +113,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">반 및 출석 관리</h2>
-          <p className="text-slate-500">{isDirector ? "학급별 공통 교재 및 수업 요일을 관리합니다." : "담당 학급의 출석 및 요일을 관리합니다."}</p>
+          <p className="text-slate-500">{isDirector ? "학급별 담임 교사 및 공통 정보를 관리합니다." : "담당 학급의 출석 및 요일을 관리합니다."}</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
@@ -159,6 +168,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
           const presentCount = (state.attendance || []).filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
           const attendanceDays = cls.attendanceDays || [];
           const classWorkbooks = cls.workbooks || [];
+          const currentTeacher = state.users.find(u => u.id === cls.teacherId);
 
           return (
             <div key={cls.id} className={`bg-white rounded-3xl shadow-sm border transition-all overflow-hidden ${isExpanded ? 'border-indigo-400 ring-4 ring-indigo-50 shadow-xl' : 'border-slate-100'}`}>
@@ -167,10 +177,13 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                   <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 text-2xl font-black shadow-inner">{cls.name?.[0] || 'C'}</div>
                   <div>
                     <h4 className="text-xl font-black text-slate-800">{cls.name}</h4>
-                    <div className="flex gap-1 mt-1">
-                      {DAYS_OF_WEEK.map(day => (
-                        <span key={day} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${attendanceDays.includes(day) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>{day}</span>
-                      ))}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-0.5 rounded-lg">담임: {currentTeacher?.name}</span>
+                      <div className="flex gap-1">
+                        {DAYS_OF_WEEK.map(day => (
+                          <span key={day} className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${attendanceDays.includes(day) ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>{day}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -207,12 +220,24 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
                     <div className="lg:col-span-5 space-y-8">
                       {isDirector && (
-                        <div>
-                          <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">CLASS DAYS SETTINGS</h5>
-                          <div className="flex gap-2">
-                            {DAYS_OF_WEEK.map(day => (
-                              <button key={day} onClick={(e) => { e.stopPropagation(); handleUpdateClassDays(cls.id, day); }} className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-400 hover:bg-slate-50'}`}>{day}</button>
-                            ))}
+                        <div className="space-y-6">
+                          <div>
+                            <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">TEACHER SETTINGS</h5>
+                            <select 
+                              value={cls.teacherId} 
+                              onChange={(e) => handleUpdateClassTeacher(cls.id, e.target.value)}
+                              className="w-full px-4 py-2.5 rounded-xl border border-indigo-100 bg-white text-xs font-bold text-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            >
+                              {teachers.map(t => <option key={t.id} value={t.id}>{t.name} 선생님</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">CLASS DAYS SETTINGS</h5>
+                            <div className="flex gap-2">
+                              {DAYS_OF_WEEK.map(day => (
+                                <button key={day} onClick={(e) => { e.stopPropagation(); handleUpdateClassDays(cls.id, day); }} className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-400 hover:bg-slate-50'}`}>{day}</button>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
