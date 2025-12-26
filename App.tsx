@@ -20,7 +20,13 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('edulog_state');
     return saved ? JSON.parse(saved) : INITIAL_STATE;
   });
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // 로그인 상태 유지 기능 추가
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('edulog_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cloudStatus, setCloudStatus] = useState<'OFFLINE' | 'CONNECTING' | 'LIVE'>('OFFLINE');
   const [cloudError, setCloudError] = useState<string | null>(null);
@@ -34,28 +40,28 @@ const App: React.FC = () => {
     const key = localStorage.getItem('edulog_cloud_key');
 
     if (url && key) {
-      try {
-        setCloudStatus('CONNECTING');
-        const client = createClient(url, key);
-        supabaseRef.current = client;
+      const connectCloud = async () => {
+        try {
+          setCloudStatus('CONNECTING');
+          const client = createClient(url, key);
+          supabaseRef.current = client;
 
-        // 테이블 및 데이터 확인 시도
-        const checkConnection = async () => {
+          // 테이블 및 데이터 확인 시도
           const { data, error } = await client.from('app_sync').select('data').eq('id', 'global_state').single();
           
           if (error) {
-            // 테이블이 아예 없는 경우 (SQL 미실행)
             if (error.code === 'PGRST116' || error.message.includes('not found')) {
-              // 데이터만 없는 경우라면 생성 시도
+              // 테이블은 있는데 데이터만 없는 경우 생성 시도
               const { error: upsertError } = await client.from('app_sync').upsert([{ id: 'global_state', data: state }]);
               if (upsertError) {
-                setCloudError(`보관함을 찾을 수 없거나 권한이 없습니다. (코드: ${upsertError.code})`);
+                setCloudError(`보관함을 찾을 수 없거나 접근 권한이 없습니다. SQL 에디터에서 코드를 실행했는지 확인해주세요. (에러: ${upsertError.message})`);
                 setCloudStatus('OFFLINE');
               } else {
                 setCloudStatus('LIVE');
+                setCloudError(null);
               }
             } else {
-              setCloudError(`연결 실패: ${error.message}`);
+              setCloudError(`연결 실패: ${error.message}. 주소와 키를 다시 확인해주세요.`);
               setCloudStatus('OFFLINE');
             }
           } else {
@@ -65,26 +71,24 @@ const App: React.FC = () => {
             setCloudStatus('LIVE');
             setCloudError(null);
           }
-        };
 
-        checkConnection();
+          // 실시간 구독 설정
+          client
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync' }, (payload) => {
+              if (payload.new && payload.new.id === 'global_state') {
+                setState(payload.new.data);
+              }
+            })
+            .subscribe();
 
-        const subscription = client
-          .channel('schema-db-changes')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync' }, (payload) => {
-            if (payload.new && payload.new.id === 'global_state') {
-              setState(payload.new.data);
-            }
-          })
-          .subscribe();
+        } catch (err: any) {
+          setCloudError(`설정 오류: ${err.message}`);
+          setCloudStatus('OFFLINE');
+        }
+      };
 
-        return () => {
-          client.removeChannel(subscription);
-        };
-      } catch (err: any) {
-        setCloudError(`설정 오류: ${err.message}`);
-        setCloudStatus('OFFLINE');
-      }
+      connectCloud();
     }
   }, []);
 
@@ -101,11 +105,13 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    localStorage.setItem('edulog_user', JSON.stringify(user));
     navigate('/');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('edulog_user');
     setIsMenuOpen(false);
     navigate('/login');
   };

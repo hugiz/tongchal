@@ -13,9 +13,9 @@ const DataManagement: React.FC<Props> = ({ state, updateState, cloudStatus, clou
   const [cloudUrl, setCloudUrl] = useState(localStorage.getItem('edulog_cloud_url') || '');
   const [cloudKey, setCloudKey] = useState(localStorage.getItem('edulog_cloud_key') || '');
   const [currentHostname, setCurrentHostname] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const savedUrl = localStorage.getItem('edulog_cloud_url');
-  const isCloudLinked = !!savedUrl && cloudStatus === 'LIVE';
+  const isCloudLinked = cloudStatus === 'LIVE';
 
   const sqlCode = `-- 1. 데이터 보관함 만들기
 create table if not exists app_sync (
@@ -46,10 +46,14 @@ create policy "Allow public access" on app_sync for all using (true) with check 
       return;
     }
 
+    setIsSaving(true);
     localStorage.setItem('edulog_cloud_url', cloudUrl.trim());
     localStorage.setItem('edulog_cloud_key', cloudKey.trim());
-    alert('🎉 설정을 저장했습니다! 연결 상태를 확인하기 위해 앱이 다시 시작됩니다.');
-    window.location.reload();
+    
+    // 로그인은 유지하되 앱의 Supabase 연결을 재설정하기 위해 새로고침
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
   };
 
   const copyToClipboard = (text: string, msg: string) => {
@@ -90,11 +94,11 @@ create policy "Allow public access" on app_sync for all using (true) with check 
           </div>
           <div className="flex-1">
             <h3 className="text-xl font-bold">
-              {isCloudLinked ? '실시간 클라우드 가동 중' : (cloudStatus === 'CONNECTING' ? '연결을 시도하고 있습니다...' : '클라우드 연결이 필요합니다')}
+              {isCloudLinked ? '실시간 클라우드 가동 중' : (cloudStatus === 'CONNECTING' ? '연결을 시도하고 있습니다...' : '클라우드 연결 정보가 필요합니다')}
             </h3>
             {cloudError && !isCloudLinked && (
-              <div className="mt-2 p-3 bg-black/10 rounded-xl text-xs font-mono">
-                <strong>원인 파악:</strong> {cloudError}
+              <div className="mt-3 p-4 bg-rose-500 text-white rounded-2xl text-xs font-mono border border-rose-400">
+                <strong className="block mb-1">🛠️ 문제 발생:</strong> {cloudError}
               </div>
             )}
             <p className={`text-sm mt-1 ${isCloudLinked ? 'text-emerald-100' : 'text-slate-500'}`}>
@@ -108,12 +112,12 @@ create policy "Allow public access" on app_sync for all using (true) with check 
 
       <div className="grid grid-cols-1 gap-8">
         {/* Step 1 */}
-        <section className={`rounded-3xl p-8 transition-all ${cloudUrl && cloudKey ? 'bg-slate-100 border border-slate-200' : 'bg-slate-800 text-white shadow-xl'}`}>
-          <h3 className={`text-xl font-bold mb-6 flex items-center ${cloudUrl && cloudKey ? 'text-slate-400' : 'text-white'}`}>
-            <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm ${cloudUrl && cloudKey ? 'bg-slate-200 text-slate-400' : 'bg-indigo-500 text-white'}`}>1</span>
-            {cloudUrl && cloudKey ? '정보 입력 완료' : '클라우드 정보 입력 (URL/Key)'}
+        <section className={`rounded-3xl p-8 bg-slate-800 text-white shadow-xl transition-all`}>
+          <h3 className="text-xl font-bold mb-6 flex items-center">
+            <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm bg-indigo-500 text-white`}>1</span>
+            클라우드 정보 입력 (URL/Key)
           </h3>
-          <div className={`${cloudUrl && cloudKey ? 'opacity-50 pointer-events-none' : ''} space-y-5`}>
+          <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-widest">Project URL</label>
@@ -138,10 +142,12 @@ create policy "Allow public access" on app_sync for all using (true) with check 
             </div>
             <button 
               onClick={handleSaveCloudConfig}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95"
+              disabled={isSaving}
+              className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 ${isSaving ? 'bg-slate-600' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
             >
-              연결 정보 저장하기
+              {isSaving ? '저장 중...' : '연결 정보 저장 및 다시 시도'}
             </button>
+            <p className="text-[10px] text-slate-400 text-center">※ 저장 버튼을 누르면 로그인은 유지된 채로 연결을 다시 시도합니다.</p>
           </div>
         </section>
 
@@ -153,9 +159,9 @@ create policy "Allow public access" on app_sync for all using (true) with check 
           </h3>
           <div className="space-y-6">
             <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
-              <h4 className="font-bold text-indigo-800 text-sm mb-2">💡 연결이 안 된다면?</h4>
+              <h4 className="font-bold text-indigo-800 text-sm mb-2">💡 연결이 계속 안 된다면?</h4>
               <p className="text-xs text-indigo-600 leading-relaxed">
-                정보를 정확히 넣었는데도 <span className="font-bold underline">"보관함을 찾을 수 없거나 권한이 없습니다"</span>라고 뜬다면, 아래 코드를 수파베이스의 <b>SQL Editor</b>에서 실행하지 않았기 때문입니다.
+                정보를 정확히 넣었는데도 오류가 뜬다면, 아래 코드를 복사해 수파베이스의 <b>SQL Editor</b>에서 실행했는지 확인해 주세요. (이미 실행했더라도 다시 한번 실행하면 권한 설정이 초기화되어 해결될 수 있습니다.)
               </p>
             </div>
             
@@ -171,30 +177,15 @@ create policy "Allow public access" on app_sync for all using (true) with check 
                 코드 전체 복사하기
               </button>
             </div>
-
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 mb-1">순서 1</p>
-                <p className="text-xs text-slate-600">수파베이스 메뉴에서 <b>SQL Editor</b>를 누릅니다.</p>
-              </div>
-              <div className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 mb-1">순서 2</p>
-                <p className="text-xs text-slate-600"><b>New Query</b>를 누르고 복사한 코드를 붙여넣습니다.</p>
-              </div>
-              <div className="flex-1 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 mb-1">순서 3</p>
-                <p className="text-xs text-slate-600">오른쪽 아래 <b>Run</b> 버튼을 누르면 끝!</p>
-              </div>
-            </div>
           </div>
         </section>
       </div>
 
-      {cloudStatus === 'LIVE' && (
+      {(cloudStatus === 'LIVE' || cloudStatus === 'OFFLINE') && localStorage.getItem('edulog_cloud_url') && (
         <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center">
           <button 
             onClick={() => {
-              if (confirm('연결을 해제하시겠습니까? 데이터는 클라우드에 안전하게 보관되지만, 이 기기에서는 실시간 공유가 중단됩니다.')) {
+              if (confirm('연결 정보를 초기화하시겠습니까? 데이터는 클라우드에 보관되지만 이 기기에서의 연결 설정은 삭제됩니다.')) {
                 localStorage.removeItem('edulog_cloud_url');
                 localStorage.removeItem('edulog_cloud_key');
                 window.location.reload();
@@ -202,7 +193,7 @@ create policy "Allow public access" on app_sync for all using (true) with check 
             }}
             className="px-8 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold hover:bg-rose-500 hover:text-white transition-all shadow-sm"
           >
-            연결 해제하고 기기에만 저장하기
+            설정 초기화 (전부 지우고 다시 시작)
           </button>
         </div>
       )}
