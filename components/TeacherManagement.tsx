@@ -80,26 +80,50 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState }) => {
     }
   };
 
+  const handleCopyInviteLink = () => {
+    const url = localStorage.getItem('edulog_cloud_url');
+    const key = localStorage.getItem('edulog_cloud_key');
+    
+    if (!url || !key) {
+      alert('먼저 [데이터 동기화] 메뉴에서 클라우드 설정을 완료해 주세요.');
+      return;
+    }
+
+    const baseUrl = window.location.origin + window.location.pathname;
+    const inviteLink = `${baseUrl}?c_url=${encodeURIComponent(url)}&c_key=${encodeURIComponent(key)}`;
+    
+    navigator.clipboard.writeText(inviteLink);
+    alert('선생님 초대용 자동 설정 링크가 복사되었습니다!\n이 링크를 선생님들께 카톡으로 보내주시면 설정 없이 즉시 이용 가능합니다.');
+  };
+
   const teachers = state.users.filter(u => u.role === 'TEACHER');
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">교사 관리</h2>
           <p className="text-slate-500">선생님들의 계정을 생성하고 관리합니다.</p>
         </div>
-        <button 
-          onClick={() => {
-            setIsAdding(!isAdding);
-            setEditingTeacher(null);
-            setName('');
-            setPassword('');
-          }}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-indigo-700 transition-all"
-        >
-          {isAdding ? '닫기' : '새 선생님 등록'}
-        </button>
+        <div className="flex space-x-2">
+          <button 
+            onClick={handleCopyInviteLink}
+            className="bg-emerald-500 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-emerald-600 transition-all flex items-center space-x-2"
+          >
+            <span>✉️ 초대 링크 복사</span>
+          </button>
+          <button 
+            onClick={() => {
+              setIsAdding(!isAdding);
+              setEditingTeacher(null);
+              setName('');
+              setPassword('');
+            }}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-xl font-semibold shadow-md hover:bg-indigo-700 transition-all"
+          >
+            {isAdding ? '닫기' : '새 선생님 등록'}
+          </button>
+        </div>
       </div>
 
       {(isAdding || editingTeacher) && (

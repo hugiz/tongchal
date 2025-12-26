@@ -41,10 +41,16 @@ const App: React.FC = () => {
     const keyParam = params.get('c_key');
 
     if (urlParam && keyParam) {
+      // 1. 클라우드 설정 저장
       localStorage.setItem('edulog_cloud_url', decodeURIComponent(urlParam));
       localStorage.setItem('edulog_cloud_key', decodeURIComponent(keyParam));
       
-      // 파라미터 제거 후 페이지 새로고침하여 연결 시도
+      // 2. 중요: 초대 링크로 접속 시 기존 로그인 정보를 삭제하여 
+      //    선생님이 본인의 아이디로 로그인할 수 있도록 강제함 (admin 자동로그인 방지)
+      localStorage.removeItem('edulog_user');
+      setCurrentUser(null);
+      
+      // 3. 파라미터 제거 후 페이지 새로고침하여 깨끗한 상태로 연결 시도
       window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
       window.location.reload();
     }

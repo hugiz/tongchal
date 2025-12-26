@@ -59,11 +59,10 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       );
       
       setSummary(prev => ({ ...prev, [sId]: result }));
-    } catch (error) {
+    } catch (error: any) {
       console.error("Summary generation error:", error);
-      alert("AI 요약 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+      alert(`AI 요약 중 오류가 발생했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
     } finally {
-      // 성공하든 실패하든 로딩 상태는 반드시 해제하여 버튼을 다시 활성화함
       setIsSummarizing(null);
     }
   };
