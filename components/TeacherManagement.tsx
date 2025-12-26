@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppState, User } from '../types';
 
@@ -12,6 +11,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [activeTeacherId, setActiveTeacherId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -19,20 +19,31 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleAddTeacher = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isDirector) return;
-    if (!name || !password) return;
+    if (!name || !username || !password) {
+      alert('모든 정보를 입력해 주세요.');
+      return;
+    }
+
+    const isExist = state.users.some(u => u.username === username);
+    if (isExist) {
+      alert('이미 사용 중인 아이디입니다.');
+      return;
+    }
 
     const newTeacher: User = {
       id: 't' + Date.now(),
-      username: name,
-      password: password,
-      name: name,
+      username: username.trim(),
+      password: password.trim(),
+      name: name.trim(),
       role: 'TEACHER'
     };
 
     updateState(prev => ({ ...prev, users: [...prev.users, newTeacher] }));
     setName('');
+    setUsername('');
     setPassword('');
     setIsAdding(false);
+    alert('새 선생님 계정이 생성되었습니다.');
   };
 
   const handleResetPassword = (teacherId: string, teacherName: string) => {
@@ -64,6 +75,10 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
     return state.students.filter(s => teacherClassIds.includes(s.classId)).length;
   };
 
+  const getTeacherClasses = (teacherId: string) => {
+    return state.classes.filter(c => c.teacherId === teacherId);
+  };
+
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
@@ -74,21 +89,27 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
         {isDirector && (
           <div className="flex gap-2">
             <button onClick={handleCopyInviteLink} className="bg-emerald-50 text-emerald-600 px-4 py-2.5 rounded-2xl font-black text-xs border border-emerald-100 shadow-sm hover:bg-emerald-100 transition-all">🔗 초대 링크 복사</button>
-            <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95">✨ 교사 신규 등록</button>
+            <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2">
+              <span>{isAdding ? '닫기' : '✨ 교사 신규 등록'}</span>
+            </button>
           </div>
         )}
       </div>
 
       {isAdding && isDirector && (
         <form onSubmit={handleAddTeacher} className="bg-white p-8 rounded-[32px] border border-indigo-100 shadow-xl space-y-6 animate-in slide-in-from-top duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">선생님 이름 (ID로 사용됨)</label>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">선생님 성함</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
             </div>
             <div>
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">로그인 아이디</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="ID 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
+            </div>
+            <div>
               <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">초기 비밀번호</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호 설정" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="PW 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
             </div>
           </div>
           <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl hover:bg-slate-700 transition-all shadow-lg active:scale-95">교사 등록 완료</button>
@@ -99,6 +120,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
         {state.users.filter(u => u.role === 'TEACHER').map(teacher => {
           const isExpanded = activeTeacherId === teacher.id;
           const studentCount = getStudentCount(teacher.id);
+          const teacherClasses = getTeacherClasses(teacher.id);
           
           return (
             <div 
@@ -128,12 +150,19 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
                 {isExpanded && (
                   <div className="mt-6 pt-6 border-t border-slate-50 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">담당 현황</p>
-                        <p className="text-sm font-black text-slate-800">총 <span className="text-indigo-600">{studentCount}명</span>의 학생 지도 중</p>
+                    <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">담당 현황</p>
+                        <span className="text-xs font-black text-indigo-600">총 {studentCount}명 지도 중</span>
                       </div>
-                      <span className="text-2xl filter drop-shadow-sm">👨‍🎓</span>
+                      <div className="flex flex-wrap gap-1">
+                        {teacherClasses.map(cls => (
+                          <span key={cls.id} className="text-[9px] bg-white border border-slate-200 px-2 py-1 rounded-lg font-bold text-slate-500">
+                            🏫 {cls.name}
+                          </span>
+                        ))}
+                        {teacherClasses.length === 0 && <span className="text-[9px] text-slate-300 italic">배정된 반 없음</span>}
+                      </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -150,7 +179,9 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                             className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 shadow-sm"
                             title="교사 삭제"
                           >
-                            ✕
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                           </button>
                         </>
                       )}
