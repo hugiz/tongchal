@@ -47,6 +47,13 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     }));
   };
 
+  const handleGradeChange = (studentId: string, newGrade: string) => {
+    updateState(prev => ({
+      ...prev,
+      students: prev.students.map(s => s.id === studentId ? { ...s, grade: newGrade } : s)
+    }));
+  };
+
   const handleToggleIndividualWorkbook = (studentId: string, workbookId: string) => {
     updateState(prev => ({
       ...prev,
@@ -79,7 +86,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
-          <p className="text-slate-500">반에 배정하면 공통 교재가 자동 연결되며, 필요시 개인 교재를 추가할 수 있습니다.</p>
+          <p className="text-slate-500 text-sm">학생의 학급 배정 및 학년 정보를 언제든지 수정할 수 있습니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -101,7 +108,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 required 
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold"
                 placeholder="이름 입력"
               />
             </div>
@@ -110,7 +117,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               <select 
                 value={formData.grade}
                 onChange={e => setFormData({...formData, grade: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold"
               >
                 {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
@@ -120,7 +127,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               <select 
                 value={formData.classId}
                 onChange={e => setFormData({...formData, classId: e.target.value})}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold"
               >
                 <option value="">반 선택</option>
                 {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -139,10 +146,10 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">이름</th>
-                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학년</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학년 (수정가능)</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">배정 반 (수정가능)</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학습 교재 (🏛️반 / 👤개인)</th>
-                {isDirector && <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">관리</th>}
+                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -155,60 +162,58 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                   <tr key={student.id} className="hover:bg-indigo-50/20 transition-colors">
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center font-black text-indigo-600 shadow-sm">{student.name[0]}</div>
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm">{student.name[0]}</div>
                         <span className="font-bold text-slate-800">{student.name}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6 text-slate-500 text-sm font-medium">{student.grade}</td>
                     <td className="px-8 py-6">
-                      {isDirector ? (
-                        <select 
-                          value={student.classId}
-                          onChange={(e) => handleClassChange(student.id, e.target.value)}
-                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-indigo-100 transition-all"
+                       <select 
+                          value={student.grade}
+                          onChange={(e) => handleGradeChange(student.id, e.target.value)}
+                          className="bg-slate-50 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 outline-none cursor-pointer hover:bg-slate-100 transition-all"
                         >
-                          <option value="">미배정</option>
-                          {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                         </select>
-                      ) : (
-                        <span className="px-3 py-1.5 rounded-xl bg-slate-50 text-slate-500 text-[10px] font-black uppercase border border-slate-100">
-                          {studentClass?.name || '미배정'}
-                        </span>
-                      )}
+                    </td>
+                    <td className="px-8 py-6">
+                      <select 
+                        value={student.classId}
+                        onChange={(e) => handleClassChange(student.id, e.target.value)}
+                        className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-indigo-100 transition-all"
+                      >
+                        <option value="">미배정</option>
+                        {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
                     </td>
                     <td className="px-8 py-6 relative">
                       <div className="flex flex-wrap gap-1 items-center">
-                        {/* 반 공통 교재: 반 설정 시 자동 표시 */}
                         {classWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
-                          return <span key={wid} title="반 공통 교재 (자동 연동)" className="text-[9px] bg-indigo-50 text-indigo-500 font-bold px-2 py-0.5 rounded-lg border border-indigo-200">🏛️ {wb?.title}</span>;
+                          return <span key={wid} title="반 공통 교재" className="text-[9px] bg-indigo-50 text-indigo-500 font-bold px-2 py-0.5 rounded-lg border border-indigo-200">🏛️ {wb?.title}</span>;
                         })}
-                        {/* 개인 교재: 별도 추가분 */}
                         {individualWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
                           return <span key={wid} title="개인 전용 교재" className="text-[9px] bg-amber-50 text-amber-500 font-bold px-2 py-0.5 rounded-lg border border-amber-200">👤 {wb?.title}</span>;
                         })}
-                        {/* 추가 버튼 */}
                         <button 
                           onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)}
-                          className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1 shadow-sm active:scale-90"
+                          className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1"
                         >
                           + 개인교재
                         </button>
                       </div>
 
-                      {/* 교재 추가 레이어 */}
                       {wbMenuStudentId === student.id && (
                         <div className="absolute top-12 left-8 z-20 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200">
                           <div className="flex justify-between items-center mb-3">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">개인 교재 관리</h4>
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">교재 선택</h4>
                             <button onClick={() => setWbMenuStudentId(null)} className="text-slate-300 hover:text-rose-500">✕</button>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                             {state.workbooks.map(wb => {
                               const isClassWb = classWorkbooks.includes(wb.id);
                               const isIndividualWb = individualWorkbooks.includes(wb.id);
-                              if (isClassWb) return null; // 반 교재는 중복 추가 불가
+                              if (isClassWb) return null;
 
                               return (
                                 <button
@@ -228,16 +233,16 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         </div>
                       )}
                     </td>
-                    {isDirector && (
-                      <td className="px-8 py-6 text-right">
+                    <td className="px-8 py-6 text-right">
+                      {isDirector && (
                         <button 
                           onClick={() => handleDelete(student.id)}
                           className="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all ml-auto"
                         >
                           ✕
                         </button>
-                      </td>
-                    )}
+                      )}
+                    </td>
                   </tr>
                 );
               })}

@@ -13,7 +13,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const [activeActionClass, setActiveActionClass] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'LEARNING' | 'CONSULTATION'>('ATTENDANCE');
   
-  // 학생별로 선택된 문제집 ID를 관리
+  // 학생별로 선택된 문제집 ID 관리
   const [selectedWorkbooks, setSelectedWorkbooks] = useState<{[key: string]: string}>({});
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -36,7 +36,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
 
   const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316'];
 
-  // Attendance Handler
   const handleAttendance = (studentId: string, classId: string, status: AttendanceStatus) => {
     updateState(prev => {
       const existingIdx = prev.attendance.findIndex(a => a.studentId === studentId && a.date === today);
@@ -50,15 +49,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     });
   };
 
-  // Learning Progress Handler
   const handleUpdateProgress = (studentId: string, workbookId: string, pageStr: string) => {
     const page = parseInt(pageStr);
     if (!workbookId) {
-      alert('문제집을 먼저 선택해주세요.');
+      alert('공부한 문제집을 먼저 선택해 주세요.');
       return;
     }
     if (isNaN(page) || page <= 0) {
-      alert('올바른 페이지 번호를 입력해주세요.');
+      alert('진행한 페이지 번호를 정확히 입력해 주세요.');
       return;
     }
     
@@ -71,7 +69,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     };
     
     updateState(prev => ({ ...prev, progress: [...prev.progress, newProgress] }));
-    alert('학습 진도가 기록되었습니다.');
+    alert('학습 기록이 저장되었습니다.');
   };
 
   return (
@@ -79,27 +77,26 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {user?.name}님 👋</h2>
-          <p className="text-slate-500">{isDirector ? '학원 전체의 오늘을 관리합니다.' : '오늘 담당하시는 수업 현황입니다.'}</p>
+          <p className="text-slate-500 text-sm">{isDirector ? '학원 운영 현황을 실시간으로 확인합니다.' : '오늘 수업을 준비하고 기록해 주세요.'}</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>
-          <span className="text-sm font-bold text-indigo-600 px-2">{today}</span>
+          <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>
+          <span className="text-sm font-black text-indigo-600 px-2">{today}</span>
         </div>
       </header>
 
-      {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title={isDirector ? "전체 학생 수" : "담당 학생 수"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
-        <StatCard title="오늘의 반" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
+        <StatCard title={isDirector ? "전체 원생" : "관리 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
+        <StatCard title="담당 학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
         <StatCard title="오늘 등원" value={state.attendance.filter(a => a.date === today && a.status === 'PRESENT' && visibleStudentIds.includes(a.studentId)).length} icon="✅" color="bg-amber-500" />
-        <StatCard title="미상담 학생" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
+        <StatCard title="미상담 누적" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
-            수업 및 빠른 기록
+            학급별 빠른 업무 기록
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,7 +141,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                     </div>
                   </div>
 
-                  {/* Quick Action Panel */}
                   {isSelected && (
                     <div className="border-t border-slate-50 p-5 bg-slate-50/40 animate-in slide-in-from-top duration-300">
                       <div className="space-y-3">
@@ -154,12 +150,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                           const individualWorkbooks = state.workbooks.filter(w => student.workbooks.includes(w.id));
                           const allAvailableWbs = [...classWorkbooks, ...individualWorkbooks];
                           
-                          // 현재 선택된 문제집 ID
                           const currentSelectedWbId = selectedWorkbooks[student.id] || (allAvailableWbs[0]?.id || '');
 
                           return (
                             <div key={student.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm flex-wrap gap-2">
-                              <span className="text-sm font-bold text-slate-700 min-w-[60px]">{student.name}</span>
+                              <span className="text-sm font-bold text-slate-700 min-w-[70px]">{student.name}</span>
                               
                               {activeTab === 'ATTENDANCE' && (
                                 <div className="flex gap-1">
@@ -183,18 +178,18 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                               {activeTab === 'LEARNING' && (
                                 <div className="flex items-center gap-2 flex-1 min-w-[200px] justify-end">
                                   <select 
-                                    className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 outline-none max-w-[140px] truncate"
+                                    className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 outline-none max-w-[130px] truncate"
                                     value={currentSelectedWbId}
                                     onChange={(e) => setSelectedWorkbooks({...selectedWorkbooks, [student.id]: e.target.value})}
                                   >
-                                    <option value="">문제집 선택</option>
+                                    <option value="">교재 선택</option>
                                     {classWorkbooks.length > 0 && (
                                       <optgroup label="🏛️ 반 공통">
                                         {classWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
                                       </optgroup>
                                     )}
                                     {individualWorkbooks.length > 0 && (
-                                      <optgroup label="👤 개인 전용">
+                                      <optgroup label="👤 개인 교재">
                                         {individualWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
                                       </optgroup>
                                     )}
@@ -212,7 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                                       }}
                                     />
                                     <button 
-                                      className="ml-1 p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all"
+                                      className="ml-1 p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
                                       onClick={(e) => {
                                         const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                                         handleUpdateProgress(student.id, currentSelectedWbId, input.value);
@@ -232,13 +227,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                                   <input 
                                     type="text" 
                                     placeholder="관찰 소견 입력 후 Enter"
-                                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-[11px] outline-none focus:ring-2 focus:ring-rose-500 font-medium"
                                     onKeyDown={(e) => {
                                       if(e.key === 'Enter' && e.currentTarget.value) {
                                         const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today };
                                         updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] }));
                                         e.currentTarget.value = '';
-                                        alert(`${student.name} 학생 상담 관찰 기록 완료`);
+                                        alert(`${student.name} 학생의 관찰 기록을 저장했습니다.`);
                                       }
                                     }}
                                   />
@@ -247,7 +242,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                             </div>
                           );
                         })}
-                        {classStudents.length === 0 && <p className="text-center py-4 text-slate-300 text-xs italic">현재 이 반에 배정된 학생이 없습니다.</p>}
                       </div>
                     </div>
                   )}
@@ -257,10 +251,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           </div>
         </div>
 
-        {/* Analytics Section */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="text-sm font-bold mb-6 text-slate-800 uppercase tracking-widest">학년별 분포</h3>
+            <h3 className="text-xs font-bold mb-6 text-slate-800 uppercase tracking-widest">학년별 통계</h3>
             <div className="h-48">
               {gradeData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -277,22 +270,21 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2">
-                   <span className="text-2xl">📊</span>
-                   <p className="text-[10px] font-bold">데이터가 없습니다.</p>
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
+                   <p className="text-[11px] font-bold">학생 데이터 없음</p>
                 </div>
               )}
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="text-sm font-bold mb-4 text-slate-800 uppercase tracking-widest">실시간 상담 로그</h3>
+            <h3 className="text-xs font-bold mb-4 text-slate-800 uppercase tracking-widest">최근 상담/관찰 기록</h3>
             <div className="space-y-4">
               {state.consultations.filter(c => visibleStudentIds.includes(c.studentId)).slice(-3).reverse().map((c) => {
                 const student = state.students.find(s => s.id === c.studentId);
                 return (
-                  <div key={c.id} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600 shadow-sm">
+                  <div key={c.id} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-50/50 border border-slate-50">
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600">
                       {student?.name[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -306,7 +298,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                 );
               })}
               {state.consultations.filter(c => visibleStudentIds.includes(c.studentId)).length === 0 && (
-                <p className="text-center text-[10px] text-slate-400 py-10 font-bold italic">담당 학생의 상담 내역이 없습니다.</p>
+                <p className="text-center text-[10px] text-slate-400 py-10 italic">기록된 상담 내역이 없습니다.</p>
               )}
             </div>
           </div>
