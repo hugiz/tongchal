@@ -79,7 +79,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     alert('학습 기록이 저장되었습니다.');
   };
 
-  // 호칭 중복 방지 로직 (예: 원장님님 방지)
   const displayName = user?.name || '';
   const greetingName = displayName.endsWith('님') ? displayName : `${displayName}님`;
 
@@ -88,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {greetingName} 👋</h2>
-          <p className="text-slate-500 text-sm">오늘은 <span className="text-indigo-600 font-bold">{dayName}요일</span> 수업입니다.</p>
+          <p className="text-slate-500 text-sm">{isDirector ? "전체 학급의 통합 현황입니다." : "담당하고 계신 반의 수업 현황입니다."}</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
           <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>
@@ -97,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title={isDirector ? "전체 원생" : "관리 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
+        <StatCard title={isDirector ? "전체 원생" : "담당 원생"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
         <StatCard title="담당 학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
         
         <div className="group relative">
@@ -121,14 +120,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           )}
         </div>
 
-        <StatCard title="미상담 누적" value={visibleStudents.length - (state.consultations || []).filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
+        <StatCard title="오늘 상담 건수" value={(state.consultations || []).filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-6">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
-            학급별 빠른 업무 기록
+            학급별 업무 관리
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {visibleClasses.map(cls => {
@@ -144,12 +143,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                       <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner font-bold text-indigo-600">{cls.name[0]}</div>
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-wider">
-                          {presentCountClass}/{expectedCountClass} 등원 완료
+                          {presentCountClass}/{expectedCountClass} 등원
                         </span>
                       </div>
                     </div>
                     <h4 className="font-bold text-slate-800 text-lg mb-1">{cls.name}</h4>
-                    <p className="text-xs text-slate-400 mb-6 font-medium">담당 교사: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님</p>
+                    <p className="text-xs text-slate-400 mb-6 font-medium">담당: {state.users.find(u => u.id === cls.teacherId)?.name} {state.users.find(u => u.id === cls.teacherId)?.role === 'DIRECTOR' ? '원장님' : '선생님'}</p>
                     <div className="grid grid-cols-3 gap-2">
                       <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }} className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>출석</button>
                       <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }} className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>학습</button>
@@ -209,12 +208,17 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                 </div>
               );
             })}
+            {visibleClasses.length === 0 && (
+              <div className="col-span-full py-20 bg-white rounded-3xl border border-dashed border-slate-200 text-center">
+                <p className="text-slate-400 font-bold italic">담당하고 있는 학급이 없습니다.</p>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="text-xs font-bold mb-6 text-slate-800 uppercase tracking-widest">학년별 통계</h3>
+            <h3 className="text-xs font-bold mb-6 text-slate-800 uppercase tracking-widest">{isDirector ? "전체 학년 분포" : "담당 학급 학년 분포"}</h3>
             <div className="h-48">
               {gradeData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -238,7 +242,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
             </div>
           </div>
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <h3 className="text-xs font-bold mb-4 text-slate-800 uppercase tracking-widest">최근 상담/관찰 기록</h3>
+            <h3 className="text-xs font-bold mb-4 text-slate-800 uppercase tracking-widest">최근 담당 원생 관찰 기록</h3>
             <div className="space-y-4">
               {(state.consultations || []).filter(c => visibleStudentIds.includes(c.studentId)).slice(-3).reverse().map((c) => {
                 const student = state.students.find(s => s.id === c.studentId);

@@ -22,10 +22,9 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
   const myStudents = state.students.filter(s => teacherClassIds.includes(s.classId));
   const myStudentIds = myStudents.map(s => s.id);
 
-  const selectedStudent = state.students.find(s => s.id === selectedStudentId);
+  const selectedStudent = myStudents.find(s => s.id === selectedStudentId);
   const studentClass = state.classes.find(c => c.id === selectedStudent?.classId);
   
-  // 교재 리스트 분류
   const classWorkbooks = state.workbooks.filter(wb => studentClass?.workbooks.includes(wb.id));
   const individualWorkbooks = state.workbooks.filter(wb => selectedStudent?.workbooks.includes(wb.id));
 
@@ -61,7 +60,7 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
     <div className="space-y-6">
       <header>
         <h2 className="text-2xl font-bold text-slate-800">학습 현황 기록</h2>
-        <p className="text-slate-500">담당 학생들의 교재 진도를 공통/개인별로 관리합니다.</p>
+        <p className="text-slate-500">{isDirector ? "전체 원생의 학습 진도를 관리합니다." : "담당 학급 학생들의 학습 진도를 관리합니다."}</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -193,7 +192,7 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                 {visibleProgress.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-6 py-20 text-center text-slate-300 italic font-bold">
-                      아직 기록된 학습 진도가 없습니다.
+                      담당 학급의 학습 진도 기록이 없습니다.
                     </td>
                   </tr>
                 )}

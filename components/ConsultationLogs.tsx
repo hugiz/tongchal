@@ -105,7 +105,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">상담 일지 및 AI 브리핑</h2>
-          <p className="text-slate-500 text-sm">관찰 메모를 기반으로 학부모님용 리포트를 생성합니다.</p>
+          <p className="text-slate-500 text-sm">{isDirector ? "전체 학생의 관찰 메모와 학부모용 리포트를 관리합니다." : "담당 학급 학생들의 관찰 메모를 관리합니다."}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold border ${isKeyValid ? "bg-emerald-50 border-emerald-200 text-emerald-600" : "bg-amber-50 border-amber-200 text-amber-600"}`}>
@@ -178,6 +178,11 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
               </div>
             </div>
           ))}
+          {myStudents.length === 0 && (
+            <div className="py-20 text-center bg-white rounded-3xl border border-slate-100">
+               <p className="text-slate-400 font-bold italic">담당하고 있는 학생이 없어 조회할 내역이 없습니다.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

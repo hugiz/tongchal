@@ -14,14 +14,24 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const [wbMenuStudentId, setWbMenuStudentId] = useState<string | null>(null);
   const [filterGrade, setFilterGrade] = useState('전체');
   
+  const isDirector = user?.role === 'DIRECTOR';
+  
+  // 담당하고 있는 반 목록 가져오기
+  const myClasses = isDirector 
+    ? state.classes 
+    : state.classes.filter(c => c.teacherId === user?.id);
+  const myClassIds = myClasses.map(c => c.id);
+
+  // 담당하고 있는 반의 학생들만 필터링
+  const myStudents = (state.students || []).filter(s => myClassIds.includes(s.classId));
+
   const [formData, setFormData] = useState({
     name: '',
     grade: GRADES[0],
-    classId: state.classes[0]?.id || '',
+    classId: myClasses[0]?.id || '',
     workbookIds: [] as string[]
   });
 
-  const isDirector = user?.role === 'DIRECTOR';
   const allGrades = ['전체', ...GRADES];
 
   const handleAdd = (e: React.FormEvent) => {
@@ -42,7 +52,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       students: [...(prev.students || []), newStudent]
     }));
     setIsAdding(false);
-    setFormData({ name: '', grade: GRADES[0], classId: state.classes[0]?.id || '', workbookIds: [] });
+    setFormData({ name: '', grade: GRADES[0], classId: myClasses[0]?.id || '', workbookIds: [] });
   };
 
   const handleClassChange = (studentId: string, newClassId: string) => {
@@ -110,8 +120,8 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   };
 
   const filteredStudents = filterGrade === '전체' 
-    ? (state.students || []) 
-    : (state.students || []).filter(s => s.grade === filterGrade);
+    ? myStudents 
+    : myStudents.filter(s => s.grade === filterGrade);
 
   const getAbsenceCount = (studentId: string) => {
     const thirtyDaysAgo = new Date();
@@ -128,7 +138,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
-          <p className="text-slate-500 text-sm">학생별 수업 요일 및 결석 현황을 관리합니다.</p>
+          <p className="text-slate-500 text-sm">{isDirector ? "전체 학생의 정보를 관리합니다." : "담당 학급 학생의 정보를 관리합니다."}</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95">
@@ -160,7 +170,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">배정할 반</label>
               <select value={formData.classId} onChange={e => setFormData({...formData, classId: e.target.value})} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold">
                 <option value="">반 선택</option>
-                {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {myClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
           </div>
@@ -230,8 +240,30 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                             </span>
                           );
                         })}
+                        {/* 선생님은 본인 반 학생에게만 개별 교재 추가 권한을 가짐 */}
                         <button onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)} className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1">+ 추가</button>
                       </div>
+
+                      {/* 교재 추가 메뉴 팝업 */}
+                      {wbMenuStudentId === student.id && (
+                        <div className="absolute z-50 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-100 p-2 animate-in fade-in zoom-in duration-200">
+                          <p className="text-[9px] font-bold text-slate-400 px-2 py-1 uppercase tracking-widest">학습 교재 배정</p>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {state.workbooks.map(wb => {
+                              const isAssigned = individualWorkbooks.includes(wb.id) || classWorkbooks.includes(wb.id);
+                              return (
+                                <button 
+                                  key={wb.id} 
+                                  onClick={() => handleToggleIndividualWorkbook(student.id, wb.id)}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${isAssigned ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                                >
+                                  {isAssigned ? '✓ ' : ''}{wb.title}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="px-8 py-6 text-right">
                       {isDirector && (
@@ -241,6 +273,13 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                   </tr>
                 );
               })}
+              {filteredStudents.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-8 py-20 text-center text-slate-400 italic">
+                    열람 가능한 학생 데이터가 없습니다.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
