@@ -184,9 +184,9 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
                 <th className="w-[180px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">이름</th>
-                <th className="w-[160px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">학년 / 결석통계</th>
-                <th className="w-[180px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">배정 반</th>
-                <th className="w-[240px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">수업 요일 (개별수정)</th>
+                <th className="w-[160px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">학년 / 결석통계</th>
+                <th className="w-[180px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">배정 반</th>
+                <th className="w-[280px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">수업 요일 (개별수정)</th>
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">학습 교재</th>
                 <th className="w-[100px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
               </tr>
@@ -208,8 +208,8 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                       <div className="flex flex-col gap-1.5 min-w-[120px]">
-                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="bg-slate-50 text-slate-600 text-[11px] font-black px-3 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer hover:bg-white transition-all">
+                       <div className="flex flex-col items-center gap-1.5 min-w-[120px]">
+                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="w-full bg-slate-50 text-slate-600 text-[11px] font-black px-3 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer hover:bg-white transition-all">
                             {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                           </select>
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border w-fit ${absenceCount > 0 ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
@@ -218,16 +218,18 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                        </div>
                     </td>
                     <td className="px-8 py-6">
-                      <select 
-                        value={student.classId} 
-                        onChange={(e) => handleClassChange(student.id, e.target.value)} 
-                        className="bg-indigo-50/50 text-indigo-600 text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-white transition-all w-full max-w-[150px]"
-                      >
-                        {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
+                      <div className="flex justify-center">
+                        <select 
+                          value={student.classId} 
+                          onChange={(e) => handleClassChange(student.id, e.target.value)} 
+                          className="bg-indigo-50/50 text-indigo-600 text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-white transition-all w-full max-w-[150px]"
+                        >
+                          {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex gap-1 flex-wrap">
+                    <td className="px-8 py-6 whitespace-nowrap">
+                      <div className="flex gap-1 justify-center flex-nowrap">
                         {DAYS_OF_WEEK.map(day => (
                           <button key={day} onClick={() => handleToggleDay(student.id, day)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all flex-shrink-0 ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-50 text-slate-300 hover:bg-slate-100 border border-slate-100'}`}>
                             {day}
