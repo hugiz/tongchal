@@ -41,6 +41,13 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     setFormData({ name: '', grade: GRADES[0], classId: state.classes[0]?.id || '', workbookIds: [] });
   };
 
+  const handleClassChange = (studentId: string, newClassId: string) => {
+    updateState(prev => ({
+      ...prev,
+      students: prev.students.map(s => s.id === studentId ? { ...s, classId: newClassId } : s)
+    }));
+  };
+
   const handleQuickAddWorkbook = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickWbTitle) return;
@@ -82,7 +89,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
-          <p className="text-slate-500">원생 정보를 관리합니다. {isDirector ? '' : '(학생 등록은 원장님만 가능합니다)'}</p>
+          <p className="text-slate-500">원생 정보를 관리하고 반을 배정합니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -130,62 +137,10 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               </select>
             </div>
           </div>
-          <div>
-            <div className="flex justify-between items-center mb-3">
-              <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest">학습 문제집 지정</label>
-              <button 
-                type="button"
-                onClick={() => setIsQuickAddingWb(true)}
-                className="text-[10px] bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-xl font-bold hover:bg-indigo-100 transition-all"
-              >
-                + 새 교재 빠른 등록
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              {state.workbooks.map(wb => (
-                <button
-                  key={wb.id}
-                  type="button"
-                  onClick={() => toggleWorkbook(wb.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                    formData.workbookIds.includes(wb.id)
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'
-                  }`}
-                >
-                  {wb.title}
-                </button>
-              ))}
-              {state.workbooks.length === 0 && <p className="text-xs text-slate-400">등록된 문제집이 없습니다.</p>}
-            </div>
-          </div>
           <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl hover:bg-slate-700 transition-all shadow-lg active:scale-95">
             학생 등록 완료
           </button>
         </form>
-      )}
-
-      {isQuickAddingWb && (
-        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[60] p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-in zoom-in duration-200">
-            <h3 className="text-xl font-black mb-2 text-slate-800">새 교재 등록</h3>
-            <p className="text-xs text-slate-400 mb-6">문제집 명칭을 입력해주세요.</p>
-            <form onSubmit={handleQuickAddWorkbook}>
-              <input 
-                autoFocus
-                type="text"
-                value={quickWbTitle}
-                onChange={e => setQuickWbTitle(e.target.value)}
-                placeholder="교재명 입력"
-                className="w-full px-5 py-4 rounded-2xl border border-slate-200 mb-6 outline-none focus:ring-4 focus:ring-indigo-500/10 font-bold"
-              />
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setIsQuickAddingWb(false)} className="flex-1 px-4 py-3.5 bg-slate-100 text-slate-500 rounded-2xl font-bold">취소</button>
-                <button type="submit" className="flex-1 px-4 py-3.5 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg">등록</button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -197,7 +152,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학년</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">배정 반</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학습 교재</th>
-                {isDirector && <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">삭제</th>}
+                {isDirector && <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">관리</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -213,9 +168,20 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                     </td>
                     <td className="px-8 py-6 text-slate-500 text-sm font-medium">{student.grade}</td>
                     <td className="px-8 py-6">
-                      <span className="px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase shadow-sm border border-indigo-100">
-                        {studentClass?.name || '미배정'}
-                      </span>
+                      {isDirector ? (
+                        <select 
+                          value={student.classId}
+                          onChange={(e) => handleClassChange(student.id, e.target.value)}
+                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer hover:bg-indigo-100"
+                        >
+                          <option value="">미배정</option>
+                          {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl bg-slate-50 text-slate-500 text-[10px] font-black uppercase border border-slate-100">
+                          {studentClass?.name || '미배정'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex flex-wrap gap-1">
@@ -241,12 +207,6 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
             </tbody>
           </table>
         </div>
-        {state.students.length === 0 && (
-          <div className="p-20 text-center text-slate-300 font-bold flex flex-col items-center gap-2">
-            <span className="text-4xl">👥</span>
-            등록된 학생이 없습니다.
-          </div>
-        )}
       </div>
     </div>
   );
