@@ -62,6 +62,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       students: (prev.students || []).map(s => s.id === studentId ? { 
         ...s, 
         classId: newClassId, 
+        // 반을 변경하면 해당 반의 기본 등원 요일을 초기값으로 세팅 (필요 시 나중에 개별 수정 가능)
         attendanceDays: studentClass ? [...(studentClass.attendanceDays || [])] : (s.attendanceDays || [])
       } : s)
     }));
@@ -134,7 +135,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
@@ -180,11 +181,12 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1000px]">
+          <table className="w-full text-left min-w-[1100px]">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">이름</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학년 / 결석통계</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">배정 반</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">수업 요일 (개별수정)</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학습 교재</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">관리</th>
@@ -208,13 +210,22 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                     </td>
                     <td className="px-8 py-6">
                        <div className="flex flex-col gap-1">
-                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="bg-slate-50 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 outline-none cursor-pointer">
+                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="bg-slate-50 text-slate-600 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-slate-200 outline-none cursor-pointer hover:bg-white transition-all">
                             {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                           </select>
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border w-fit ${absenceCount > 0 ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                             최근 30일 결석: {absenceCount}
                           </span>
                        </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <select 
+                        value={student.classId} 
+                        onChange={(e) => handleClassChange(student.id, e.target.value)} 
+                        className="bg-indigo-50/50 text-indigo-600 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-white transition-all min-w-[120px]"
+                      >
+                        {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex gap-1">
@@ -240,11 +251,9 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                             </span>
                           );
                         })}
-                        {/* 선생님은 본인 반 학생에게만 개별 교재 추가 권한을 가짐 */}
                         <button onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)} className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1">+ 추가</button>
                       </div>
 
-                      {/* 교재 추가 메뉴 팝업 */}
                       {wbMenuStudentId === student.id && (
                         <div className="absolute z-50 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-100 p-2 animate-in fade-in zoom-in duration-200">
                           <p className="text-[9px] font-bold text-slate-400 px-2 py-1 uppercase tracking-widest">학습 교재 배정</p>
@@ -275,7 +284,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               })}
               {filteredStudents.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center text-slate-400 italic">
+                  <td colSpan={6} className="px-8 py-20 text-center text-slate-400 italic">
                     열람 가능한 학생 데이터가 없습니다.
                   </td>
                 </tr>
