@@ -147,9 +147,9 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
         {allGrades.map(g => (
-          <button key={g} onClick={() => setFilterGrade(g)} className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-black transition-all ${filterGrade === g ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:bg-slate-50 shadow-sm'}`}>{g}</button>
+          <button key={g} onClick={() => setFilterGrade(g)} className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${filterGrade === g ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-500 border border-slate-100 hover:bg-slate-50 shadow-sm'}`}>{g}</button>
         ))}
       </div>
 
@@ -180,15 +180,15 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
       <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[1200px]">
+          <table className="w-full text-left min-w-[1100px] table-fixed">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="w-[180px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">이름</th>
-                <th className="w-[160px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">학년 / 결석통계</th>
-                <th className="w-[180px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">배정 반</th>
-                <th className="w-[280px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">수업 요일 (개별수정)</th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">학습 교재</th>
-                <th className="w-[100px] px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
+                <th className="w-[150px] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">이름</th>
+                <th className="w-[130px] px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">학년 / 통계</th>
+                <th className="w-[140px] px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">배정 반</th>
+                <th className="w-[255px] px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">수업 요일</th>
+                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">학습 교재</th>
+                <th className="w-[80px] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -201,58 +201,58 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 
                 return (
                   <tr key={student.id} className="hover:bg-indigo-50/20 transition-colors">
-                    <td className="px-8 py-6 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm flex-shrink-0">{student.name?.[0] || 'S'}</div>
-                        <span className="font-black text-slate-800 text-sm tracking-tight">{student.name}</span>
+                    <td className="px-6 py-4 whitespace-nowrap overflow-hidden">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm flex-shrink-0 text-xs">{student.name?.[0] || 'S'}</div>
+                        <span className="font-black text-slate-800 text-[13px] tracking-tight truncate">{student.name}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
-                       <div className="flex flex-col items-center gap-1.5 min-w-[120px]">
-                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="w-full bg-slate-50 text-slate-600 text-[11px] font-black px-3 py-2 rounded-xl border border-slate-200 outline-none cursor-pointer hover:bg-white transition-all">
+                    <td className="px-4 py-4">
+                       <div className="flex flex-col items-center gap-1 min-w-[100px]">
+                          <select value={student.grade} onChange={(e) => handleGradeChange(student.id, e.target.value)} className="w-full bg-slate-50 text-slate-600 text-[10px] font-black px-2 py-1.5 rounded-lg border border-slate-200 outline-none cursor-pointer hover:bg-white transition-all">
                             {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                           </select>
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border w-fit ${absenceCount > 0 ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                            최근 30일 결석: {absenceCount}
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border w-fit ${absenceCount > 0 ? 'bg-rose-50 text-rose-500 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                            결석: {absenceCount}
                           </span>
                        </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4">
                       <div className="flex justify-center">
                         <select 
                           value={student.classId} 
                           onChange={(e) => handleClassChange(student.id, e.target.value)} 
-                          className="bg-indigo-50/50 text-indigo-600 text-[11px] font-black px-3 py-2 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-white transition-all w-full max-w-[150px]"
+                          className="bg-indigo-50/50 text-indigo-600 text-[10px] font-black px-2 py-1.5 rounded-lg border border-indigo-100 outline-none cursor-pointer hover:bg-white transition-all w-full max-w-[120px]"
                         >
                           {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                       </div>
                     </td>
-                    <td className="px-8 py-6 whitespace-nowrap">
-                      <div className="flex gap-1 justify-center flex-nowrap">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex gap-0.5 justify-center flex-nowrap">
                         {DAYS_OF_WEEK.map(day => (
-                          <button key={day} onClick={() => handleToggleDay(student.id, day)} className={`w-8 h-8 rounded-xl text-[10px] font-black transition-all flex-shrink-0 ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-50 text-slate-300 hover:bg-slate-100 border border-slate-100'}`}>
+                          <button key={day} onClick={() => handleToggleDay(student.id, day)} className={`w-7 h-7 rounded-lg text-[9px] font-black transition-all flex-shrink-0 ${attendanceDays.includes(day) ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-50 text-slate-300 hover:bg-slate-100 border border-slate-100'}`}>
                             {day}
                           </button>
                         ))}
                       </div>
                     </td>
-                    <td className="px-8 py-6 relative">
-                      <div className="flex flex-wrap gap-1.5 items-center">
+                    <td className="px-6 py-4 relative">
+                      <div className="flex flex-wrap gap-1 items-center">
                         {classWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
-                          return <span key={wid} className="text-[9px] bg-indigo-50 text-indigo-500 font-black px-2 py-1 rounded-lg border border-indigo-200">🏛️ {wb?.title}</span>;
+                          return <span key={wid} className="text-[8px] bg-indigo-50 text-indigo-500 font-black px-1.5 py-0.5 rounded-md border border-indigo-100 whitespace-nowrap">🏛️ {wb?.title}</span>;
                         })}
                         {individualWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
                           return (
-                            <span key={wid} className="flex items-center gap-1 text-[9px] bg-amber-50 text-amber-500 font-black px-2 py-1 rounded-lg border border-amber-200">
+                            <span key={wid} className="flex items-center gap-0.5 text-[8px] bg-amber-50 text-amber-500 font-black px-1.5 py-0.5 rounded-md border border-amber-100 whitespace-nowrap">
                               👤 {wb?.title}
-                              <button onClick={() => handleToggleIndividualWorkbook(student.id, wid)} className="text-rose-400 hover:text-rose-600 font-black leading-none ml-1">✕</button>
+                              <button onClick={() => handleToggleIndividualWorkbook(student.id, wid)} className="text-rose-400 hover:text-rose-600 font-black leading-none ml-0.5">✕</button>
                             </span>
                           );
                         })}
-                        <button onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)} className="text-[9px] bg-slate-800 text-white font-black px-2.5 py-1 rounded-lg hover:bg-slate-700 transition-all ml-1">+ 교재 추가</button>
+                        <button onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)} className="text-[8px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-md hover:bg-slate-700 transition-all">+ 추가</button>
                       </div>
 
                       {wbMenuStudentId === student.id && (
@@ -275,9 +275,9 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         </div>
                       )}
                     </td>
-                    <td className="px-8 py-6 text-right">
+                    <td className="px-6 py-4 text-right">
                       {isDirector && (
-                        <button onClick={() => handleDelete(student.id)} className="w-9 h-9 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all ml-auto border border-rose-100">✕</button>
+                        <button onClick={() => handleDelete(student.id)} className="w-7 h-7 flex items-center justify-center rounded-xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all ml-auto border border-rose-100 text-[10px]">✕</button>
                       )}
                     </td>
                   </tr>
@@ -285,7 +285,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               })}
               {filteredStudents.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-8 py-24 text-center text-slate-300 font-black italic">
+                  <td colSpan={6} className="px-8 py-20 text-center text-slate-300 font-black italic">
                     조회된 학생 데이터가 없습니다.
                   </td>
                 </tr>
