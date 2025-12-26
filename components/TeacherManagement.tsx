@@ -113,7 +113,9 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       {teacher.name[0]}
                     </div>
                     <div>
-                      <span className="font-black text-slate-800 text-base block">{teacher.name} 선생님</span>
+                      <span className={`font-black text-base block transition-colors ${isExpanded ? 'text-indigo-600' : 'text-slate-800'}`}>
+                        {teacher.name} 선생님
+                      </span>
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID: {teacher.username}</span>
                     </div>
                   </div>
@@ -129,9 +131,9 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                     <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
                       <div>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">담당 현황</p>
-                        <p className="text-sm font-black text-slate-800">총 {studentCount}명의 학생 지도 중</p>
+                        <p className="text-sm font-black text-slate-800">총 <span className="text-indigo-600">{studentCount}명</span>의 학생 지도 중</p>
                       </div>
-                      <span className="text-2xl">👨‍🎓</span>
+                      <span className="text-2xl filter drop-shadow-sm">👨‍🎓</span>
                     </div>
 
                     <div className="flex gap-2">
@@ -139,13 +141,13 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         <>
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleResetPassword(teacher.id, teacher.name); }}
-                            className="flex-1 bg-amber-50 text-amber-600 py-3 rounded-2xl text-[11px] font-black border border-amber-100 hover:bg-amber-100 transition-all active:scale-95"
+                            className="flex-1 bg-amber-50 text-amber-600 py-3 rounded-2xl text-[11px] font-black border border-amber-100 hover:bg-amber-600 hover:text-white transition-all active:scale-95 shadow-sm"
                           >
                             비번 초기화
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); if(confirm(`${teacher.name} 선생님을 삭제하시겠습니까?`)) updateState(prev => ({ ...prev, users: prev.users.filter(u => u.id !== teacher.id) })); }}
-                            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all border border-rose-100"
+                            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 shadow-sm"
                             title="교사 삭제"
                           >
                             ✕
