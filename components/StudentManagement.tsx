@@ -11,8 +11,7 @@ interface Props {
 
 const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [isQuickAddingWb, setIsQuickAddingWb] = useState(false);
-  const [quickWbTitle, setQuickWbTitle] = useState('');
+  const [wbMenuStudentId, setWbMenuStudentId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -48,20 +47,20 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     }));
   };
 
-  const handleQuickAddWorkbook = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickWbTitle) return;
-
-    const newWb: Workbook = {
-      id: 'w' + Date.now(),
-      title: quickWbTitle,
-      totalPages: 150 
-    };
-
-    updateState(prev => ({ ...prev, workbooks: [...prev.workbooks, newWb] }));
-    setFormData(prev => ({ ...prev, workbookIds: [...prev.workbookIds, newWb.id] }));
-    setQuickWbTitle('');
-    setIsQuickAddingWb(false);
+  const handleToggleIndividualWorkbook = (studentId: string, workbookId: string) => {
+    updateState(prev => ({
+      ...prev,
+      students: prev.students.map(s => {
+        if (s.id !== studentId) return s;
+        const exists = s.workbooks.includes(workbookId);
+        return {
+          ...s,
+          workbooks: exists 
+            ? s.workbooks.filter(id => id !== workbookId)
+            : [...s.workbooks, workbookId]
+        };
+      })
+    }));
   };
 
   const handleDelete = (id: string) => {
@@ -75,21 +74,12 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
     }
   };
 
-  const toggleWorkbook = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      workbookIds: prev.workbookIds.includes(id) 
-        ? prev.workbookIds.filter(wid => wid !== id)
-        : [...prev.workbookIds, id]
-    }));
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
-          <p className="text-slate-500">원생 정보를 관리하고 반을 배정합니다.</p>
+          <p className="text-slate-500">원생 정보를 관리하고 개인별 교재를 추가합니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -158,6 +148,9 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
             <tbody className="divide-y divide-slate-100">
               {state.students.map(student => {
                 const studentClass = state.classes.find(c => c.id === student.classId);
+                const classWorkbooks = studentClass?.workbooks || [];
+                const individualWorkbooks = student.workbooks || [];
+                
                 return (
                   <tr key={student.id} className="hover:bg-indigo-50/20 transition-colors">
                     <td className="px-8 py-6">
@@ -172,7 +165,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         <select 
                           value={student.classId}
                           onChange={(e) => handleClassChange(student.id, e.target.value)}
-                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer hover:bg-indigo-100"
+                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-indigo-100"
                         >
                           <option value="">미배정</option>
                           {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -183,19 +176,64 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         </span>
                       )}
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex flex-wrap gap-1">
-                        {student.workbooks.map(wid => {
+                    <td className="px-8 py-6 relative">
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {/* 반 공통 교재 */}
+                        {classWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
-                          return <span key={wid} className="text-[9px] bg-slate-100 text-slate-400 font-bold px-2 py-0.5 rounded-lg border border-slate-200">{wb?.title}</span>;
+                          return <span key={wid} title="반 공통 교재" className="text-[9px] bg-indigo-50 text-indigo-400 font-bold px-2 py-0.5 rounded-lg border border-indigo-100">🏛️ {wb?.title}</span>;
                         })}
+                        {/* 개인 교재 */}
+                        {individualWorkbooks.map(wid => {
+                          const wb = state.workbooks.find(w => w.id === wid);
+                          return <span key={wid} title="개인 전용 교재" className="text-[9px] bg-amber-50 text-amber-500 font-bold px-2 py-0.5 rounded-lg border border-amber-100">👤 {wb?.title}</span>;
+                        })}
+                        {/* 추가 버튼 */}
+                        <button 
+                          onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)}
+                          className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1"
+                        >
+                          + 추가
+                        </button>
                       </div>
+
+                      {/* 교재 추가 레이어 */}
+                      {wbMenuStudentId === student.id && (
+                        <div className="absolute top-12 left-8 z-20 w-48 bg-white border border-slate-200 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200">
+                          <div className="flex justify-between items-center mb-3">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">개인 교재 관리</h4>
+                            <button onClick={() => setWbMenuStudentId(null)} className="text-slate-300 hover:text-rose-500">✕</button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                            {state.workbooks.map(wb => {
+                              const isClassWb = classWorkbooks.includes(wb.id);
+                              const isIndividualWb = individualWorkbooks.includes(wb.id);
+                              if (isClassWb) return null; // 반 교재는 중복 추가 불가
+
+                              return (
+                                <button
+                                  key={wb.id}
+                                  onClick={() => handleToggleIndividualWorkbook(student.id, wb.id)}
+                                  className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-bold border transition-all ${
+                                    isIndividualWb 
+                                    ? 'bg-amber-500 border-amber-500 text-white shadow-sm' 
+                                    : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {wb.title}
+                                </button>
+                              );
+                            })}
+                            {state.workbooks.length === 0 && <p className="text-[9px] text-slate-300 italic text-center py-4">등록된 교재가 없습니다.</p>}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     {isDirector && (
                       <td className="px-8 py-6 text-right">
                         <button 
                           onClick={() => handleDelete(student.id)}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-400 hover:bg-rose-500 hover:text-white transition-all ml-auto"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all ml-auto"
                         >
                           ✕
                         </button>

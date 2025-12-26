@@ -13,21 +13,22 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
   const [selectedWbId, setSelectedWbId] = useState('');
   const [page, setPage] = useState(0);
 
-  // Filter logic: Director sees all, Teacher sees only their class students
   const isDirector = user?.role === 'DIRECTOR';
   const teacherClasses = isDirector 
     ? state.classes 
     : state.classes.filter(c => c.teacherId === user?.id);
   const teacherClassIds = teacherClasses.map(c => c.id);
   
-  // 담당 선생님의 반에 소속된 학생만 필터링
   const myStudents = state.students.filter(s => teacherClassIds.includes(s.classId));
   const myStudentIds = myStudents.map(s => s.id);
 
   const selectedStudent = state.students.find(s => s.id === selectedStudentId);
-  const studentWorkbooks = state.workbooks.filter(wb => selectedStudent?.workbooks.includes(wb.id));
+  const studentClass = state.classes.find(c => c.id === selectedStudent?.classId);
+  
+  // 교재 리스트 분류
+  const classWorkbooks = state.workbooks.filter(wb => studentClass?.workbooks.includes(wb.id));
+  const individualWorkbooks = state.workbooks.filter(wb => selectedStudent?.workbooks.includes(wb.id));
 
-  // 표시용 최근 기록도 필터링된 학생들 것만 노출
   const visibleProgress = state.progress.filter(p => myStudentIds.includes(p.studentId));
 
   const handleUpdateProgress = (e: React.FormEvent) => {
@@ -51,7 +52,7 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
     <div className="space-y-6">
       <header>
         <h2 className="text-2xl font-bold text-slate-800">학습 현황 기록</h2>
-        <p className="text-slate-500">담당 학생들의 교재 진도를 관리합니다.</p>
+        <p className="text-slate-500">담당 학생들의 교재 진도를 공통/개인별로 관리합니다.</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -76,7 +77,7 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
             {selectedStudent && (
               <div className="space-y-5 animate-in slide-in-from-top-2 duration-300">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">학습 교재</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">학습 교재 선택</label>
                   <select 
                     value={selectedWbId}
                     onChange={e => setSelectedWbId(e.target.value)}
@@ -84,7 +85,19 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                     required
                   >
                     <option value="">문제집 선택</option>
-                    {studentWorkbooks.map(wb => <option key={wb.id} value={wb.id}>{wb.title}</option>)}
+                    {classWorkbooks.length > 0 && (
+                      <optgroup label="🏛️ 반 공통 교재">
+                        {classWorkbooks.map(wb => <option key={wb.id} value={wb.id}>{wb.title}</option>)}
+                      </optgroup>
+                    )}
+                    {individualWorkbooks.length > 0 && (
+                      <optgroup label="👤 개인 전용 교재">
+                        {individualWorkbooks.map(wb => <option key={wb.id} value={wb.id}>{wb.title}</option>)}
+                      </optgroup>
+                    )}
+                    {classWorkbooks.length === 0 && individualWorkbooks.length === 0 && (
+                      <option disabled>배정된 교재가 없습니다.</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -117,14 +130,16 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                   <th className="px-6 py-4">학생명</th>
                   <th className="px-6 py-4">교재명</th>
                   <th className="px-6 py-4">진척도</th>
-                  <th className="px-6 py-4">최근 기록</th>
+                  <th className="px-6 py-4">구분</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {visibleProgress.slice().reverse().slice(0, 10).map(p => {
                   const student = state.students.find(s => s.id === p.studentId);
+                  const studentClass = state.classes.find(c => c.id === student?.classId);
                   const wb = state.workbooks.find(w => w.id === p.workbookId);
                   const percent = Math.min(100, Math.round((p.currentPage / (wb?.totalPages || 1)) * 100));
+                  const isClassWb = studentClass?.workbooks.includes(p.workbookId);
                   
                   return (
                     <tr key={p.id} className="hover:bg-indigo-50/20 transition-colors">
@@ -137,16 +152,20 @@ const LearningStatus: React.FC<Props> = ({ state, updateState, user }) => {
                           </div>
                           <span className="text-[10px] font-black text-indigo-600">{percent}%</span>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-300">{p.currentPage} / {wb?.totalPages}p</span>
                       </td>
-                      <td className="px-6 py-5 text-[10px] font-bold text-slate-300">{p.date}</td>
+                      <td className="px-6 py-5">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border ${
+                          isClassWb ? 'bg-indigo-50 text-indigo-400 border-indigo-100' : 'bg-amber-50 text-amber-500 border-amber-100'
+                        }`}>
+                          {isClassWb ? '반 공통' : '개인'}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          {visibleProgress.length === 0 && <div className="p-20 text-center text-slate-300 font-bold italic">기록된 진도가 없습니다.</div>}
         </div>
       </div>
     </div>

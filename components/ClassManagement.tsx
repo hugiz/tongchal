@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { AppState, User, Class, AttendanceStatus, AttendanceRecord } from '../types';
+import { AppState, User, Class, AttendanceStatus } from '../types';
 
 interface Props {
   state: AppState;
@@ -46,7 +46,6 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleTeacherChange = (classId: string, newTeacherId: string) => {
     updateState(prev => ({
       ...prev,
-      // Fix: Changed 's' to 'c' to correctly return the original class object when ID doesn't match
       classes: prev.classes.map(c => c.id === classId ? { ...c, teacherId: newTeacherId } : c)
     }));
   };
@@ -82,7 +81,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
     });
   };
 
-  const toggleWorkbook = (id: string) => {
+  const toggleWorkbookSelection = (id: string) => {
     setSelectedWorkbookIds(prev => 
       prev.includes(id) ? prev.filter(wid => wid !== id) : [...prev, id]
     );
@@ -95,7 +94,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">반 및 출석 관리</h2>
-          <p className="text-slate-500">학급을 관리하고 오늘 등원 여부를 체크하세요.</p>
+          <p className="text-slate-500">학급을 관리하고 반별 공통 교재를 지정합니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -132,6 +131,28 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
               </select>
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest">반 공통 학습 교재 선택</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {state.workbooks.map(wb => (
+                <button
+                  key={wb.id}
+                  type="button"
+                  onClick={() => toggleWorkbookSelection(wb.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                    selectedWorkbookIds.includes(wb.id)
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300'
+                  }`}
+                >
+                  {wb.title}
+                </button>
+              ))}
+            </div>
+            {state.workbooks.length === 0 && <p className="text-xs text-rose-400 font-bold mt-2">등록된 교재가 없습니다. '문제집 관리'에서 먼저 등록해주세요.</p>}
+          </div>
+
           <button type="submit" className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-slate-700 active:scale-95 transition-all">학급 개설 완료</button>
         </form>
       )}
@@ -181,7 +202,18 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 </div>
                 
                 <div className="mt-5 md:mt-0 flex items-center gap-6">
-                  <div className="text-right">
+                  <div className="flex flex-col items-end">
+                    <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">Common Books</p>
+                    <div className="flex -space-x-2">
+                      {cls.workbooks.slice(0, 3).map(wid => (
+                        <div key={wid} title={state.workbooks.find(w => w.id === wid)?.title} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-400">
+                          {state.workbooks.find(w => w.id === wid)?.title[0]}
+                        </div>
+                      ))}
+                      {cls.workbooks.length > 3 && <div className="w-6 h-6 rounded-full bg-slate-800 border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">+{cls.workbooks.length - 3}</div>}
+                    </div>
+                  </div>
+                  <div className="text-right border-l pl-6 border-slate-100">
                     <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">Attendance</p>
                     <p className="text-lg font-black text-indigo-600">{presentCount} / {classStudents.length}</p>
                   </div>
