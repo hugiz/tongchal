@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [cloudStatus, setCloudStatus] = useState<'OFFLINE' | 'CONNECTING' | 'LIVE'>('OFFLINE');
   const [cloudError, setCloudError] = useState<string | null>(null);
   const supabaseRef = useRef<SupabaseClient | null>(null);
+  const isInitialFetch = useRef(true);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,21 +42,16 @@ const App: React.FC = () => {
     const keyParam = params.get('c_key');
 
     if (urlParam && keyParam) {
-      // 1. 클라우드 설정 저장
       localStorage.setItem('edulog_cloud_url', decodeURIComponent(urlParam));
       localStorage.setItem('edulog_cloud_key', decodeURIComponent(keyParam));
-      
-      // 2. 중요: 초대 링크로 접속 시 기존 로그인 정보를 삭제하여 
-      //    선생님이 본인의 아이디로 로그인할 수 있도록 강제함 (admin 자동로그인 방지)
       localStorage.removeItem('edulog_user');
       setCurrentUser(null);
-      
-      // 3. 파라미터 제거 후 페이지 새로고침하여 깨끗한 상태로 연결 시도
       window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
       window.location.reload();
     }
   }, []);
 
+  // 클라우드 연결 로직
   useEffect(() => {
     const url = localStorage.getItem('edulog_cloud_url');
     const key = localStorage.getItem('edulog_cloud_key');
@@ -67,34 +63,31 @@ const App: React.FC = () => {
           const client = createClient(url, key);
           supabaseRef.current = client;
 
+          // 초기 데이터 가져오기
           const { data, error } = await client.from('app_sync').select('data').eq('id', 'global_state').single();
           
           if (error) {
             if (error.code === 'PGRST116' || error.message.includes('not found')) {
-              const { error: upsertError } = await client.from('app_sync').upsert([{ id: 'global_state', data: state }]);
-              if (upsertError) {
-                setCloudError(`보관함 접근 권한 오류: ${upsertError.message}`);
-                setCloudStatus('OFFLINE');
-              } else {
-                setCloudStatus('LIVE');
-                setCloudError(null);
-              }
+              // 테이블이 비어있으면 로컬 데이터를 업로드
+              await client.from('app_sync').upsert([{ id: 'global_state', data: state }]);
+              setCloudStatus('LIVE');
             } else {
-              setCloudError(`연결 실패: ${error.message}`);
+              setCloudError(`클라우드 접근 실패: ${error.message}`);
               setCloudStatus('OFFLINE');
             }
-          } else {
-            if (data && data.data) {
-              setState(data.data);
-            }
+          } else if (data && data.data) {
+            // 클라우드에 데이터가 있으면 로컬 상태 업데이트
+            setState(data.data);
             setCloudStatus('LIVE');
-            setCloudError(null);
           }
+          
+          isInitialFetch.current = false;
 
+          // 실시간 구독 설정
           client
-            .channel('schema-db-changes')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync' }, (payload) => {
-              if (payload.new && payload.new.id === 'global_state') {
+            .channel('global-changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync', filter: 'id=eq.global_state' }, (payload) => {
+              if (payload.new && payload.new.data) {
                 setState(payload.new.data);
               }
             })
@@ -110,10 +103,12 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // 로컬 상태 변화를 로컬스토리지 및 클라우드에 반영
   useEffect(() => {
     localStorage.setItem('edulog_state', JSON.stringify(state));
     
-    if (cloudStatus === 'LIVE' && supabaseRef.current) {
+    // 초기 로딩 중이 아닐 때만 클라우드로 푸시
+    if (!isInitialFetch.current && cloudStatus === 'LIVE' && supabaseRef.current) {
       supabaseRef.current.from('app_sync').update({ data: state }).eq('id', 'global_state')
         .then(({ error }) => {
           if (error) console.error('Cloud push failed', error);
@@ -160,9 +155,6 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center space-x-2">
             <CloudBadge status={cloudStatus} />
-            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold border border-indigo-400">
-              {currentUser.name[0]}
-            </div>
           </div>
         </header>
       )}
@@ -180,7 +172,7 @@ const App: React.FC = () => {
           <div className="p-6 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold tracking-tight">EduLog</h1>
-              <div className="flex items-center mt-1">
+              <div className="mt-2">
                  <CloudBadge status={cloudStatus} />
               </div>
             </div>
@@ -212,15 +204,15 @@ const App: React.FC = () => {
 
           <div className="p-4 border-t border-indigo-600 bg-indigo-800/50">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white">
+              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white shadow-inner">
                 {currentUser.name[0]}
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">{currentUser.name}</p>
-                <p className="text-xs text-indigo-300 truncate">{currentUser.role === 'DIRECTOR' ? '원장님' : '선생님'}</p>
+                <p className="text-[10px] text-indigo-300 truncate uppercase">{currentUser.role === 'DIRECTOR' ? '원장님' : '선생님'}</p>
               </div>
             </div>
-            <button onClick={handleLogout} className="w-full py-2 bg-indigo-900/50 hover:bg-rose-600 rounded-xl text-xs transition-all flex items-center justify-center space-x-2">
+            <button onClick={handleLogout} className="w-full py-2.5 bg-indigo-900/50 hover:bg-rose-600 rounded-xl text-xs font-bold transition-all flex items-center justify-center space-x-2">
               <span>로그아웃</span>
             </button>
           </div>
@@ -229,6 +221,13 @@ const App: React.FC = () => {
 
       <main className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
+          {cloudError && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-2xl flex items-center gap-3">
+              <span className="text-lg">⚠️</span>
+              <p className="flex-1">{cloudError}</p>
+              <button onClick={() => window.location.reload()} className="bg-rose-100 px-3 py-1 rounded-lg font-bold">재시도</button>
+            </div>
+          )}
           <Routes>
             <Route path="/login" element={<Login onLogin={handleLogin} users={state.users} />} />
             <Route path="/" element={<Dashboard state={state} user={currentUser} />} />
@@ -248,21 +247,21 @@ const App: React.FC = () => {
 };
 
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
-  <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
-    status === 'LIVE' ? 'bg-emerald-500 text-white shadow-lg' : 
+  <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all shadow-sm ${
+    status === 'LIVE' ? 'bg-emerald-500 text-white' : 
     status === 'CONNECTING' ? 'bg-amber-400 text-amber-900' : 'bg-rose-500 text-white'
   }`}>
-    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-white pulse-green' : 'bg-white'}`}></div>
-    <span>{status === 'LIVE' ? '실시간 클라우드 연결됨' : status === 'CONNECTING' ? '연결 중...' : '연결 필요 (데이터 미공유)'}</span>
+    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-white animate-pulse' : 'bg-white'}`}></div>
+    <span className="whitespace-nowrap">{status === 'LIVE' ? '실시간 연동됨' : status === 'CONNECTING' ? '연결 중...' : '오프라인 (데이터 미공유)'}</span>
   </div>
 );
 
 const SidebarItem = ({ to, icon, label, active, onClick }: { to: string, icon: string, label: string, active: boolean, onClick: () => void }) => (
-  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
-    active ? 'bg-white text-indigo-700 shadow-lg' : 'text-indigo-100 hover:bg-indigo-600'
+  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all ${
+    active ? 'bg-white text-indigo-700 shadow-xl scale-[1.02]' : 'text-indigo-100 hover:bg-indigo-600'
   }`}>
     <span className="text-xl">{icon}</span>
-    <span className="font-semibold">{label}</span>
+    <span className="font-bold">{label}</span>
   </Link>
 );
 
