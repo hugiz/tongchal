@@ -8,11 +8,12 @@ export const generateConsultationSummary = async (
   workbooks: Workbook[],
   consultations: ConsultationRecord[]
 ): Promise<string> => {
-  // 가이드라인: 호출 직전에 인스턴스 생성 (최신 API_KEY 반영 보장)
+  // 호출 직전에 process.env.API_KEY를 참조하여 인스턴스 생성
+  // (openSelectKey로 주입된 키가 즉시 반영됨)
   const apiKey = process.env.API_KEY;
   
-  if (!apiKey || apiKey === "undefined") {
-    throw new Error("API_KEY_NOT_FOUND");
+  if (!apiKey) {
+    throw new Error("API_KEY_MISSING");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -33,25 +34,16 @@ export const generateConsultationSummary = async (
     선생님이 남긴 [관찰 메모]와 [진도 데이터]를 바탕으로 학부모님께 카카오톡으로 보낼 다정하고 전문적인 '오늘의 브리핑'을 작성하세요.
 
     [출력 규칙]
-    1. 반드시 정중하고 다정한 '해요체'를 사용하세요.
-    2. 가독성을 위해 문단 사이에는 빈 줄을 추가하세요.
-    3. 적절한 이모지(🌟, 📚, ✍️, 🌸)를 활용하세요.
-    4. 카카오톡으로 바로 복사해서 보낼 수 있는 깔끔한 형식이어야 합니다.
-
-    [구성]
-    🌟 오늘의 학습 요약
-    📚 상세 진도 현황
-    ✍️ 선생님 관찰 소견
-    🌸 학부모님께 드리는 메시지
+    1. 반드시 정중하고 다정한 '해요체'를 사용하세요. (예: ~했습니다 -> ~했어요)
+    2. 가독성을 위해 문단 사이에는 반드시 빈 줄을 추가하세요.
+    3. 적절한 이모지(🌟, 📚, ✍️, 🌸)를 섹션마다 활용하세요.
   `;
 
   const userPrompt = `
     학생 성명: ${student.name}
     학년: ${student.grade}
-    오늘의 진도:
-    ${progressText}
-    선생님의 기록:
-    ${recentNotes}
+    진도 상황: ${progressText}
+    선생님 기록: ${recentNotes}
   `;
 
   try {
@@ -60,18 +52,19 @@ export const generateConsultationSummary = async (
       contents: [{ parts: [{ text: userPrompt }] }],
       config: {
         systemInstruction: systemInstruction,
-        temperature: 0.5,
-        thinkingConfig: { thinkingBudget: 0 } // Flash 모델 latency 최적화
+        temperature: 0.7,
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
     
-    if (!response.text) throw new Error("AI 응답이 비어있습니다.");
+    if (!response.text) throw new Error("AI response is empty");
     return response.text.trim();
   } catch (error: any) {
-    if (error.message?.includes("Requested entity was not found")) {
+    console.error("Gemini API Error:", error);
+    // 키 관련 에러 발생 시 상위 컴포넌트에서 감지할 수 있도록 에러 메시지 전달
+    if (error.message?.includes("Requested entity was not found") || error.message?.includes("404")) {
       throw new Error("INVALID_API_KEY");
     }
-    console.error("Gemini API Error:", error);
     throw error;
   }
 };

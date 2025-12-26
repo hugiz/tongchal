@@ -17,32 +17,31 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   const [hasKey, setHasKey] = useState(false);
 
   useEffect(() => {
-    checkKeyStatus();
+    const checkKey = async () => {
+      if ((window as any).aistudio) {
+        const selected = await (window as any).aistudio.hasSelectedApiKey();
+        setHasKey(selected);
+      } else if (process.env.API_KEY) {
+        setHasKey(true);
+      }
+    };
+    checkKey();
   }, []);
-
-  const checkKeyStatus = async () => {
-    if ((window as any).aistudio) {
-      const isSelected = await (window as any).aistudio.hasSelectedApiKey();
-      setHasKey(isSelected || !!process.env.API_KEY);
-    } else {
-      setHasKey(!!process.env.API_KEY && process.env.API_KEY !== "undefined");
-    }
-  };
 
   const handleOpenKeySelector = async () => {
     if ((window as any).aistudio) {
       await (window as any).aistudio.openSelectKey();
-      // 가이드라인: 선택 후 즉시 성공으로 가정하고 진행
+      // 가이드라인에 따라 선택 직후 성공으로 가정하고 진행
       setHasKey(true);
     } else {
-      alert("이 환경에서는 API 키 선택기를 지원하지 않습니다. Vercel 환경 변수를 확인해 주세요.");
+      alert("배포 환경에서 AI 기능을 사용하려면 원장님의 API 키 설정이 필요합니다.");
     }
   };
 
   const handleGenerateAISummary = async (sId: string) => {
-    if (!hasKey) {
+    // 1. 키가 없는 경우 선택창 먼저 오픈
+    if (!hasKey && (window as any).aistudio) {
       await handleOpenKeySelector();
-      return;
     }
 
     const student = state.students.find(s => s.id === sId);
@@ -64,12 +63,18 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       setSummary(prev => ({ ...prev, [sId]: result }));
     } catch (error: any) {
       console.error("AI Summary Error:", error);
-      if (error.message === "API_KEY_NOT_FOUND" || error.message === "INVALID_API_KEY") {
+      
+      // 2. 키 오류 발생 시 재설정 유도 (가이드라인 준수)
+      if (error.message === "INVALID_API_KEY" || error.message === "API_KEY_MISSING") {
         setHasKey(false);
-        alert("API 키가 유효하지 않거나 설정되지 않았습니다. 키 선택 버튼을 눌러 다시 설정해 주세요.");
-        handleOpenKeySelector();
+        if ((window as any).aistudio) {
+          alert("AI 서비스 연결에 문제가 발생했습니다. 다시 한번 키를 선택해 주세요.");
+          await handleOpenKeySelector();
+        } else {
+          alert("API 키가 설정되지 않았거나 유효하지 않습니다. 환경 변수를 확인해 주세요.");
+        }
       } else {
-        alert(`오류가 발생했습니다: ${error.message}`);
+        alert(`AI 브리핑 생성 중 오류가 발생했습니다: ${error.message}`);
       }
     } finally {
       setIsSummarizing(null);
@@ -80,7 +85,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     const today = new Date().toLocaleDateString();
     const fullText = `[EduLog] ${studentName} 학생 학습 리포트 (${today})\n--------------------------\n\n${text}`;
     navigator.clipboard.writeText(fullText);
-    alert('카카오톡 전송용 브리핑이 복사되었습니다!');
+    alert('카카오톡 전송용 문구가 복사되었습니다!');
   };
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -109,19 +114,29 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">상담 일지 및 AI 브리핑</h2>
-          <p className="text-slate-500 text-sm">선생님의 메모를 AI가 학부모용 카톡 문구로 변환합니다.</p>
+          <p className="text-slate-500 text-sm">기록된 메모를 분석해 카카오톡용 보고서를 생성합니다.</p>
         </div>
         
-        <button 
-          onClick={handleOpenKeySelector}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-            hasKey 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
-            : "bg-amber-50 border-amber-200 text-amber-600 animate-pulse"
-          }`}
-        >
-          {hasKey ? "✅ AI 서비스 연결됨" : "🔑 AI 서비스 연결하기 (클릭)"}
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button 
+            onClick={handleOpenKeySelector}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${
+              hasKey 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
+              : "bg-amber-50 border-amber-200 text-amber-600 animate-pulse"
+            }`}
+          >
+            {hasKey ? "✅ AI 서비스 연결됨" : "🔑 AI 서비스 연결 필요 (클릭)"}
+          </button>
+          <a 
+            href="https://ai.google.dev/gemini-api/docs/billing" 
+            target="_blank" 
+            rel="noreferrer"
+            className="text-[10px] text-slate-400 hover:underline px-2"
+          >
+            결제 및 요금 안내 확인하기 ↗
+          </a>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -144,13 +159,13 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">관찰 메모</label>
+                <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">선생님 소견 (메모)</label>
                 <textarea 
                   rows={6} 
                   value={note} 
                   onChange={e => setNote(e.target.value)} 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-sm" 
-                  placeholder="예: 오늘 집중력이 아주 좋았습니다. 숙제 완성도가 높네요." 
+                  placeholder="예: 오늘 숙제 완성도가 매우 높았습니다. 어려운 응용 문제도 스스로 잘 해결해냈습니다." 
                   required 
                 />
               </div>
@@ -188,10 +203,10 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                     {isSummarizing === student.id ? (
                       <span className="flex items-center gap-2">
                         <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        브리핑 생성 중...
+                        생성 중...
                       </span>
                     ) : (
-                      <>✨ AI 카톡 브리핑</>
+                      <>✨ 카톡 브리핑 생성</>
                     )}
                   </button>
                 )}
@@ -203,13 +218,13 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                     <div className="flex justify-between items-center mb-6">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
-                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">AI 추천 브리핑</h4>
+                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">AI 추천 브리핑 (카톡용)</h4>
                       </div>
                       <button 
                         onClick={() => handleCopyToKakao(student.name, summary[student.id])}
                         className="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg active:scale-95"
                       >
-                        <span>📋 카톡용 복사</span>
+                        <span>📋 전체 복사하기</span>
                       </button>
                     </div>
                     <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-300 bg-slate-800/50 p-5 rounded-2xl border border-slate-700/50">
@@ -219,19 +234,17 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                 ) : (
                   isDirector && (
                     <div className="mb-6 py-10 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-300">
-                      <p className="text-xs font-bold">상단 버튼을 눌러 카톡 브리핑을 생성하세요.</p>
-                      {!hasKey && <p className="text-[10px] mt-2 text-rose-400 font-bold">먼저 AI 서비스 연결이 필요합니다.</p>}
+                      <p className="text-xs font-bold">선생님들의 메모를 바탕으로 AI 브리핑을 생성해 보세요.</p>
+                      {!hasKey && <p className="text-[10px] mt-2 text-rose-400 font-bold italic">※ 먼저 상단의 'AI 서비스 연결' 버튼을 눌러주세요.</p>}
                     </div>
                   )
                 )}
                 
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    최근 관찰 메모
-                  </h4>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">기록된 관찰 소견</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {state.consultations.filter(c => c.studentId === student.id).length === 0 ? (
-                      <p className="text-xs text-slate-300 italic">기록된 내용이 없습니다.</p>
+                      <p className="text-xs text-slate-300 italic">최근 기록된 소견이 없습니다.</p>
                     ) : (
                       state.consultations.filter(c => c.studentId === student.id).reverse().slice(0, 4).map(c => (
                         <div key={c.id} className="text-xs text-slate-600 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
