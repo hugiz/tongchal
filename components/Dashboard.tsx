@@ -79,9 +79,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     alert('학습 기록이 저장되었습니다.');
   };
 
-  const displayName = user?.name || '';
-  // 이름이 '원장'이나 '님'으로 끝나지 않는 경우에만 '님'을 붙여 자연스럽게 만듭니다.
-  const greetingName = (displayName.endsWith('원장') || displayName.endsWith('님')) ? `${displayName}님` : `${displayName}님`;
+  // 인사말 호칭 로직 수정
+  const greetingName = isDirector 
+    ? "원장님" 
+    : `${user?.name || '선생'}${user?.name?.endsWith('님') || user?.name?.endsWith('선생님') ? '' : ' 선생님'}`;
 
   return (
     <div className="space-y-8 pb-20">

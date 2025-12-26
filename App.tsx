@@ -157,9 +157,12 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} users={state.users} />;
   }
 
-  // 사이드바용 직함 텍스트 결정 (원장님 원장님 방지)
-  const roleLabel = currentUser?.role === 'DIRECTOR' ? '원장님' : '선생님';
-  const showRoleLabel = currentUser?.name && !currentUser.name.includes(roleLabel);
+  // 사이드바용 호칭 로직 수정
+  const isDirector = currentUser?.role === 'DIRECTOR';
+  const roleLabel = isDirector ? '원장' : '선생님';
+  // 이름에 이미 '원장'이나 '선생님'이 포함되어 있으면 그대로 사용
+  const sidebarName = currentUser?.name || '';
+  const needsLabel = !sidebarName.includes(roleLabel);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
@@ -183,7 +186,7 @@ const App: React.FC = () => {
           
           <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
             <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
-            {currentUser.role === 'DIRECTOR' && (
+            {isDirector && (
               <>
                 <SidebarItem to="/teachers" icon="👩‍🏫" label="교사 관리" active={location.pathname === '/teachers'} onClick={() => setIsMenuOpen(false)} />
                 <SidebarItem to="/sync" icon="🔄" label="데이터 동기화" active={location.pathname === '/sync'} onClick={() => setIsMenuOpen(false)} />
@@ -199,10 +202,10 @@ const App: React.FC = () => {
 
           <div className="p-4 border-t border-indigo-600 bg-indigo-800/50">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white uppercase">{currentUser.name?.[0] || 'U'}</div>
+              <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white uppercase">{sidebarName?.[0] || 'U'}</div>
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate">{currentUser.name}</p>
-                {showRoleLabel && <p className="text-[10px] text-indigo-300 uppercase">{roleLabel}</p>}
+                <p className="text-sm font-bold truncate">{sidebarName}</p>
+                {needsLabel && <p className="text-[10px] text-indigo-300 uppercase">{roleLabel}</p>}
               </div>
             </div>
             <button onClick={handleLogout} className="w-full py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-xs font-bold transition-all">로그아웃</button>

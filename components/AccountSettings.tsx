@@ -52,10 +52,11 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
     setConfirmPw('');
   };
 
-  // 프로필 타이틀 생성 로직 (원장님 원장님 방지)
-  const name = currentUser.name || '';
-  const roleTitle = currentUser.role === 'DIRECTOR' ? '원장님' : '선생님';
-  const profileTitle = name.includes(roleTitle) ? name : `${name} ${roleTitle}`;
+  // 프로필 타이틀 수정 (원장님 요청 사항 반영)
+  const isDirector = currentUser.role === 'DIRECTOR';
+  const profileTitle = isDirector 
+    ? "통찰수학 원장님" 
+    : `${currentUser.name}${currentUser.name.endsWith('선생님') ? '' : ' 선생님'}`;
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -67,7 +68,7 @@ const AccountSettings: React.FC<Props> = ({ currentUser, setCurrentUser, updateS
       <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center space-x-6 mb-8 pb-8 border-b border-slate-50">
           <div className="w-20 h-20 rounded-full bg-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-indigo-100">
-            {name[0] || 'U'}
+            {currentUser.name[0] || 'U'}
           </div>
           <div>
             <h3 className="text-xl font-bold text-slate-800">{profileTitle}</h3>
