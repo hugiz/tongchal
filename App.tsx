@@ -12,6 +12,7 @@ import ConsultationLogs from './components/ConsultationLogs';
 import WorkbookManagement from './components/WorkbookManagement';
 import TeacherManagement from './components/TeacherManagement';
 import DataManagement from './components/DataManagement';
+import AccountSettings from './components/AccountSettings';
 import Login from './components/Login';
 
 const App: React.FC = () => {
@@ -27,7 +28,6 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Initialize Supabase if credentials exist
   useEffect(() => {
     const url = localStorage.getItem('edulog_cloud_url');
     const key = localStorage.getItem('edulog_cloud_key');
@@ -38,19 +38,16 @@ const App: React.FC = () => {
         const client = createClient(url, key);
         supabaseRef.current = client;
 
-        // Fetch initial data from cloud
         client.from('app_sync').select('data').eq('id', 'global_state').single()
           .then(({ data, error }) => {
             if (data && data.data) {
               setState(data.data);
               setCloudStatus('LIVE');
             } else if (error && error.code === 'PGRST116') {
-              // Row doesn't exist, create it with current state
               client.from('app_sync').insert([{ id: 'global_state', data: state }]).then(() => setCloudStatus('LIVE'));
             }
           });
 
-        // Subscribe to real-time changes
         const subscription = client
           .channel('schema-db-changes')
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync' }, (payload) => {
@@ -70,11 +67,9 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // 2. Persist to LocalStorage and push to Cloud on change
   useEffect(() => {
     localStorage.setItem('edulog_state', JSON.stringify(state));
     
-    // Push to cloud if live (Debounced would be better in production)
     if (cloudStatus === 'LIVE' && supabaseRef.current) {
       supabaseRef.current.from('app_sync').update({ data: state }).eq('id', 'global_state')
         .then(({ error }) => {
@@ -108,7 +103,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* Sidebar and Mobile Header same as before */}
       {currentUser && (
         <header className="md:hidden sticky top-0 z-30 bg-indigo-700 text-white p-4 flex items-center justify-between shadow-md">
           <div className="flex items-center space-x-2">
@@ -128,7 +122,6 @@ const App: React.FC = () => {
         </header>
       )}
 
-      {/* Sidebar Overlay (Mobile) */}
       {isMenuOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
       )}
@@ -144,7 +137,6 @@ const App: React.FC = () => {
               <h1 className="text-2xl font-bold tracking-tight">EduLog</h1>
               <div className="flex items-center mt-1">
                  <CloudBadge status={cloudStatus} />
-                 <span className="text-indigo-200 text-[10px] ml-2">학원 통합 관리</span>
               </div>
             </div>
             <button onClick={() => setIsMenuOpen(false)} className="md:hidden p-2 text-indigo-300">
@@ -167,6 +159,10 @@ const App: React.FC = () => {
             <SidebarItem to="/classes" icon="🏫" label="반 및 출석 관리" active={location.pathname === '/classes'} onClick={() => setIsMenuOpen(false)} />
             <SidebarItem to="/learning" icon="✍️" label="학습 현황 기록" active={location.pathname === '/learning'} onClick={() => setIsMenuOpen(false)} />
             <SidebarItem to="/consultation" icon="📋" label="상담 일지" active={location.pathname === '/consultation'} onClick={() => setIsMenuOpen(false)} />
+            
+            <div className="pt-4 mt-4 border-t border-indigo-600/50">
+              <SidebarItem to="/account" icon="⚙️" label="내 정보 관리" active={location.pathname === '/account'} onClick={() => setIsMenuOpen(false)} />
+            </div>
           </nav>
 
           <div className="p-4 border-t border-indigo-600 bg-indigo-800/50">
@@ -198,6 +194,7 @@ const App: React.FC = () => {
             <Route path="/classes" element={<ClassManagement state={state} updateState={updateState} user={currentUser} />} />
             <Route path="/learning" element={<LearningStatus state={state} updateState={updateState} user={currentUser} />} />
             <Route path="/consultation" element={<ConsultationLogs state={state} updateState={updateState} user={currentUser} />} />
+            <Route path="/account" element={<AccountSettings currentUser={currentUser} setCurrentUser={setCurrentUser} updateState={updateState} />} />
           </Routes>
         </div>
       </main>
@@ -206,12 +203,12 @@ const App: React.FC = () => {
 };
 
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
-  <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-full text-[9px] font-bold ${
-    status === 'LIVE' ? 'bg-emerald-100 text-emerald-700' : 
-    status === 'CONNECTING' ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'
+  <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+    status === 'LIVE' ? 'bg-emerald-500 text-white shadow-lg' : 
+    status === 'CONNECTING' ? 'bg-amber-400 text-amber-900' : 'bg-slate-500/50 text-slate-100 border border-white/20'
   }`}>
-    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-emerald-500 pulse-green' : 'bg-slate-400'}`}></div>
-    <span>{status === 'LIVE' ? 'CLOUD LIVE' : status === 'CONNECTING' ? 'SYNCING...' : 'LOCAL ONLY'}</span>
+    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-white pulse-green' : 'bg-slate-300'}`}></div>
+    <span>{status === 'LIVE' ? '실시간 클라우드 연결됨' : status === 'CONNECTING' ? '연결 시도 중...' : '기기 전용 (데이터 미공유)'}</span>
   </div>
 );
 

@@ -61,6 +61,7 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
   };
 
   const isLocal = currentHostname.includes('localhost') || currentHostname.includes('127.0.0.1');
+  const isCloudLinked = !!localStorage.getItem('edulog_cloud_url');
 
   return (
     <div className="space-y-8 pb-20">
@@ -83,32 +84,34 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
               </svg>
             </button>
           </div>
-          {isLocal && <p className="text-[10px] text-rose-500 mt-1 font-semibold">⚠️ 현재는 컴퓨터 내부 주소입니다. 외부 접속 불가.</p>}
         </div>
       </header>
 
-      {/* Deployment Checkbox List */}
-      <section className="bg-slate-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32"></div>
-        <h3 className="text-xl font-bold mb-6 flex items-center">
-          <span className="mr-2">🏁</span> 배포 후 최종 체크리스트
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-          <CheckItem label="Vercel Domains에서 https 주소 확인" checked={!isLocal} />
-          <CheckItem label="Vercel Settings에서 API_KEY 환경변수 등록" checked={false} />
-          <CheckItem label="Supabase URL & Key 설정 저장" checked={!!cloudUrl} />
-          <CheckItem label="선생님들께 주소 및 로그인 정보 공유" checked={false} />
+      {/* Cloud Importance Info */}
+      <div className={`p-6 rounded-3xl border ${isCloudLinked ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+        <div className="flex items-start space-x-4">
+          <div className="text-2xl">{isCloudLinked ? '✅' : '⚠️'}</div>
+          <div>
+            <h3 className={`font-bold ${isCloudLinked ? 'text-emerald-800' : 'text-amber-800'}`}>
+              {isCloudLinked ? '클라우드가 연결되었습니다!' : '현재 기기 전용(로컬) 모드입니다.'}
+            </h3>
+            <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+              {isCloudLinked 
+                ? '이제 모든 기기에서 데이터가 실시간으로 공유됩니다. 선생님들이 각자의 폰이나 PC에서 접속해도 똑같은 정보를 볼 수 있습니다.'
+                : '지금은 원장님 브라우저에만 데이터가 저장됩니다. 다른 선생님들과 데이터를 공유하려면 반드시 아래 1번 과정을 진행해주세요.'}
+            </p>
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* Cloud Sync Section */}
       <section className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div className="mb-4 md:mb-0">
             <h3 className="text-xl font-bold flex items-center">
-              <span className="mr-2">⚡️</span> 1. 실시간 클라우드 데이터 연결
+              <span className="mr-2">⚡️</span> 1. 실시간 데이터 공유 설정 (Supabase)
             </h3>
-            <p className="text-indigo-100 text-sm mt-1">데이터베이스 정보를 입력하면 모든 기기에서 실시간 동기화됩니다.</p>
+            <p className="text-indigo-100 text-sm mt-1">이 설정을 마치면 "기기 전용"이 "실시간 클라우드"로 바뀝니다.</p>
           </div>
         </div>
 
@@ -162,7 +165,7 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
           <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl">📤</div>
           <div className="flex-1">
             <h4 className="font-bold text-slate-800">전체 데이터 백업</h4>
-            <p className="text-xs text-slate-500">학생, 진도, 상담 기록을 파일로 저장합니다.</p>
+            <p className="text-xs text-slate-500">모든 데이터를 파일로 저장합니다.</p>
           </div>
           <button onClick={handleExport} className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-700">다운로드</button>
         </div>
@@ -170,8 +173,8 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center space-x-4">
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl">📥</div>
           <div className="flex-1">
-            <h4 className="font-bold text-slate-800">데이터 불러오기</h4>
-            <p className="text-xs text-slate-500">백업된 파일을 선택하여 데이터를 복구합니다.</p>
+            <h4 className="font-bold text-slate-800">백업 데이터 복구</h4>
+            <p className="text-xs text-slate-500">저장된 파일을 불러옵니다.</p>
           </div>
           <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".json" />
           <button onClick={() => fileInputRef.current?.click()} className="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-700">파일 선택</button>
@@ -180,14 +183,5 @@ const DataManagement: React.FC<Props> = ({ state, updateState }) => {
     </div>
   );
 };
-
-const CheckItem = ({ label, checked }: { label: string, checked: boolean }) => (
-  <div className="flex items-center space-x-3 bg-white/5 p-3 rounded-xl border border-white/10">
-    <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${checked ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'}`}>
-      {checked && <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-    </div>
-    <span className={`text-sm ${checked ? 'text-white font-medium' : 'text-slate-400'}`}>{label}</span>
-  </div>
-);
 
 export default DataManagement;
