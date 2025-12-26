@@ -80,14 +80,15 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   };
 
   const displayName = user?.name || '';
-  const greetingName = displayName.endsWith('님') ? displayName : `${displayName}님`;
+  // 이름이 '원장'이나 '님'으로 끝나지 않는 경우에만 '님'을 붙여 자연스럽게 만듭니다.
+  const greetingName = (displayName.endsWith('원장') || displayName.endsWith('님')) ? `${displayName}님` : `${displayName}님`;
 
   return (
     <div className="space-y-8 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">안녕하세요, {greetingName} 👋</h2>
-          <p className="text-slate-500 text-sm">{isDirector ? "전체 학급의 통합 현황입니다." : "담당하고 계신 반의 수업 현황입니다."}</p>
+          <p className="text-slate-500 text-sm">{isDirector ? "통찰수학학원의 전체 현황입니다." : "담당하고 계신 반의 수업 현황입니다."}</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
           <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>

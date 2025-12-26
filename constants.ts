@@ -5,7 +5,7 @@ export const DAYS_OF_WEEK = ['월', '화', '수', '목', '금', '토', '일'];
 
 export const INITIAL_STATE: AppState = {
   users: [
-    { id: '1', username: 'admin', password: '1234', name: '원장님', role: 'DIRECTOR' },
+    { id: '1', username: 'admin', password: '1234', name: '통찰수학 원장', role: 'DIRECTOR' },
     { id: '2', username: 'teacher1', password: 'teacher1', name: '이선생', role: 'TEACHER' },
     { id: '3', username: 'teacher2', password: 'teacher2', name: '박선생', role: 'TEACHER' },
   ],
