@@ -10,6 +10,8 @@ interface Props {
 const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [activeTeacherId, setActiveTeacherId] = useState<string | null>(null);
+  
+  // 신규 교사 등록용 상태
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,14 +21,15 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const handleAddTeacher = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isDirector) return;
+    
     if (!name || !username || !password) {
-      alert('모든 정보를 입력해 주세요.');
+      alert('이름, 아이디, 비밀번호를 모두 입력해 주세요.');
       return;
     }
 
     const isExist = state.users.some(u => u.username === username);
     if (isExist) {
-      alert('이미 사용 중인 아이디입니다.');
+      alert('이미 등록된 아이디입니다. 다른 아이디를 사용해 주세요.');
       return;
     }
 
@@ -38,12 +41,17 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       role: 'TEACHER'
     };
 
-    updateState(prev => ({ ...prev, users: [...prev.users, newTeacher] }));
+    updateState(prev => ({ 
+      ...prev, 
+      users: [...prev.users, newTeacher] 
+    }));
+
+    // 초기화
     setName('');
     setUsername('');
     setPassword('');
     setIsAdding(false);
-    alert('새 선생님 계정이 생성되었습니다.');
+    alert(`${name} 선생님 계정이 정상적으로 생성되었습니다.`);
   };
 
   const handleResetPassword = (teacherId: string, teacherName: string) => {
@@ -52,21 +60,17 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
         ...prev,
         users: prev.users.map(u => u.id === teacherId ? { ...u, password: '1234' } : u)
       }));
-      alert('비밀번호가 1234로 초기화되었습니다.');
+      alert('비밀번호가 1234로 변경되었습니다.');
     }
   };
 
-  const handleCopyInviteLink = () => {
-    const url = localStorage.getItem('edulog_cloud_url');
-    const key = localStorage.getItem('edulog_cloud_key');
-    if (!url || !key) {
-      alert('먼저 [데이터 동기화] 메뉴에서 클라우드 설정을 완료해 주세요.');
-      return;
+  const handleDeleteTeacher = (teacherId: string, teacherName: string) => {
+    if (confirm(`${teacherName} 선생님을 삭제하시겠습니까? 관련 데이터는 유지되나 로그인은 불가능해집니다.`)) {
+      updateState(prev => ({
+        ...prev,
+        users: prev.users.filter(u => u.id !== teacherId)
+      }));
     }
-    const baseUrl = window.location.origin + window.location.pathname;
-    const inviteLink = `${baseUrl}?c_url=${encodeURIComponent(url)}&c_key=${encodeURIComponent(key)}`;
-    navigator.clipboard.writeText(inviteLink);
-    alert('초대 링크가 복사되었습니다!');
   };
 
   const getStudentCount = (teacherId: string) => {
@@ -75,22 +79,31 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
     return state.students.filter(s => teacherClassIds.includes(s.classId)).length;
   };
 
-  const getTeacherClasses = (teacherId: string) => {
-    return state.classes.filter(c => c.teacherId === teacherId);
+  const handleCopyInviteLink = () => {
+    const url = localStorage.getItem('edulog_cloud_url');
+    const key = localStorage.getItem('edulog_cloud_key');
+    if (!url || !key) {
+      alert('데이터 동기화 설정이 되어있지 않습니다. [데이터 동기화] 메뉴를 확인하세요.');
+      return;
+    }
+    const baseUrl = window.location.origin + window.location.pathname;
+    const inviteLink = `${baseUrl}?c_url=${encodeURIComponent(url)}&c_key=${encodeURIComponent(key)}`;
+    navigator.clipboard.writeText(inviteLink);
+    alert('초대 링크가 복사되었습니다. 선생님께 전달해 주세요.');
   };
 
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">교사 관리</h2>
-          <p className="text-slate-500 text-sm font-medium">선생님들의 계정 권한 및 담당 현황을 관리합니다.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">교사 및 계정 관리</h2>
+          <p className="text-slate-500 text-sm font-medium">선생님들의 아이디/비밀번호와 담당 현황을 관리합니다.</p>
         </div>
         {isDirector && (
           <div className="flex gap-2">
             <button onClick={handleCopyInviteLink} className="bg-emerald-50 text-emerald-600 px-4 py-2.5 rounded-2xl font-black text-xs border border-emerald-100 shadow-sm hover:bg-emerald-100 transition-all">🔗 초대 링크 복사</button>
-            <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2">
-              <span>{isAdding ? '닫기' : '✨ 교사 신규 등록'}</span>
+            <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
+              {isAdding ? '닫기' : '✨ 교사 신규 등록'}
             </button>
           </div>
         )}
@@ -101,18 +114,18 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">선생님 성함</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="이름 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="실명 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">로그인 아이디</label>
-              <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="ID 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">로그인 아이디 (ID)</label>
+              <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="아이디 지정" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">초기 비밀번호</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="PW 입력" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
+              <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">초기 비밀번호 (PW)</label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호 지정" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold" required />
             </div>
           </div>
-          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl hover:bg-slate-700 transition-all shadow-lg active:scale-95">교사 등록 완료</button>
+          <button type="submit" className="w-full bg-slate-800 text-white font-black py-4 rounded-2xl hover:bg-slate-700 transition-all shadow-lg active:scale-95">계정 생성 및 등록 완료</button>
         </form>
       )}
 
@@ -120,7 +133,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
         {state.users.filter(u => u.role === 'TEACHER').map(teacher => {
           const isExpanded = activeTeacherId === teacher.id;
           const studentCount = getStudentCount(teacher.id);
-          const teacherClasses = getTeacherClasses(teacher.id);
+          const teacherClasses = state.classes.filter(c => c.teacherId === teacher.id);
           
           return (
             <div 
@@ -138,7 +151,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       <span className={`font-black text-base block transition-colors ${isExpanded ? 'text-indigo-600' : 'text-slate-800'}`}>
                         {teacher.name} 선생님
                       </span>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID: {teacher.username}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">아이디: {teacher.username}</span>
                     </div>
                   </div>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform duration-300 ${isExpanded ? 'rotate-180 bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}>
@@ -175,7 +188,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                             비번 초기화
                           </button>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); if(confirm(`${teacher.name} 선생님을 삭제하시겠습니까?`)) updateState(prev => ({ ...prev, users: prev.users.filter(u => u.id !== teacher.id) })); }}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteTeacher(teacher.id, teacher.name); }}
                             className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-300 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 shadow-sm"
                             title="교사 삭제"
                           >
@@ -194,7 +207,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
         })}
         {state.users.filter(u => u.role === 'TEACHER').length === 0 && (
           <div className="col-span-full py-20 text-center bg-white rounded-[40px] border border-dashed border-slate-200">
-            <p className="text-slate-300 font-black italic">등록된 선생님이 없습니다.</p>
+            <p className="text-slate-300 font-black italic">등록된 선생님이 없습니다. [교사 신규 등록]을 이용하세요.</p>
           </div>
         )}
       </div>
