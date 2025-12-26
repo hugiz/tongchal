@@ -4,9 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // Vercel 환경 변수를 클라이언트 코드에서 process.env로 접근 가능하게 매핑
+    // Vercel 환경 변수 process.env.API_KEY를 클라이언트 코드에 안전하게 주입
     'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
-    'process.env': '({})' // 빈 객체로 폴리필하여 에러 방지
+    'process.env': '({})' // 빈 객체 폴리필로 런타임 에러 방지
   },
   server: {
     port: 3000
