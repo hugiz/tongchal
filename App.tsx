@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [cloudStatus, setCloudStatus] = useState<'OFFLINE' | 'CONNECTING' | 'LIVE'>('OFFLINE');
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const supabaseRef = useRef<SupabaseClient | null>(null);
   
   const navigate = useNavigate();
@@ -38,15 +39,35 @@ const App: React.FC = () => {
         const client = createClient(url, key);
         supabaseRef.current = client;
 
-        client.from('app_sync').select('data').eq('id', 'global_state').single()
-          .then(({ data, error }) => {
+        // 테이블 및 데이터 확인 시도
+        const checkConnection = async () => {
+          const { data, error } = await client.from('app_sync').select('data').eq('id', 'global_state').single();
+          
+          if (error) {
+            // 테이블이 아예 없는 경우 (SQL 미실행)
+            if (error.code === 'PGRST116' || error.message.includes('not found')) {
+              // 데이터만 없는 경우라면 생성 시도
+              const { error: upsertError } = await client.from('app_sync').upsert([{ id: 'global_state', data: state }]);
+              if (upsertError) {
+                setCloudError(`보관함을 찾을 수 없거나 권한이 없습니다. (코드: ${upsertError.code})`);
+                setCloudStatus('OFFLINE');
+              } else {
+                setCloudStatus('LIVE');
+              }
+            } else {
+              setCloudError(`연결 실패: ${error.message}`);
+              setCloudStatus('OFFLINE');
+            }
+          } else {
             if (data && data.data) {
               setState(data.data);
-              setCloudStatus('LIVE');
-            } else if (error && error.code === 'PGRST116') {
-              client.from('app_sync').insert([{ id: 'global_state', data: state }]).then(() => setCloudStatus('LIVE'));
             }
-          });
+            setCloudStatus('LIVE');
+            setCloudError(null);
+          }
+        };
+
+        checkConnection();
 
         const subscription = client
           .channel('schema-db-changes')
@@ -60,8 +81,8 @@ const App: React.FC = () => {
         return () => {
           client.removeChannel(subscription);
         };
-      } catch (err) {
-        console.error('Cloud connection failed', err);
+      } catch (err: any) {
+        setCloudError(`설정 오류: ${err.message}`);
         setCloudStatus('OFFLINE');
       }
     }
@@ -189,7 +210,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Dashboard state={state} user={currentUser} />} />
             <Route path="/teachers" element={<TeacherManagement state={state} updateState={updateState} />} />
             <Route path="/students" element={<StudentManagement state={state} updateState={updateState} />} />
-            <Route path="/sync" element={<DataManagement state={state} updateState={setFullState} />} />
+            <Route path="/sync" element={<DataManagement state={state} updateState={setFullState} cloudStatus={cloudStatus} cloudError={cloudError} />} />
             <Route path="/workbooks" element={<WorkbookManagement state={state} updateState={updateState} />} />
             <Route path="/classes" element={<ClassManagement state={state} updateState={updateState} user={currentUser} />} />
             <Route path="/learning" element={<LearningStatus state={state} updateState={updateState} user={currentUser} />} />
@@ -205,10 +226,10 @@ const App: React.FC = () => {
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
   <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${
     status === 'LIVE' ? 'bg-emerald-500 text-white shadow-lg' : 
-    status === 'CONNECTING' ? 'bg-amber-400 text-amber-900' : 'bg-slate-500/50 text-slate-100 border border-white/20'
+    status === 'CONNECTING' ? 'bg-amber-400 text-amber-900' : 'bg-rose-500 text-white'
   }`}>
-    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-white pulse-green' : 'bg-slate-300'}`}></div>
-    <span>{status === 'LIVE' ? '실시간 클라우드 연결됨' : status === 'CONNECTING' ? '연결 시도 중...' : '기기 전용 (데이터 미공유)'}</span>
+    <div className={`w-1.5 h-1.5 rounded-full ${status === 'LIVE' ? 'bg-white pulse-green' : 'bg-white'}`}></div>
+    <span>{status === 'LIVE' ? '실시간 클라우드 연결됨' : status === 'CONNECTING' ? '연결 중...' : '연결 필요 (데이터 미공유)'}</span>
   </div>
 );
 
