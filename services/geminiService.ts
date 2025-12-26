@@ -8,13 +8,15 @@ export const generateConsultationSummary = async (
   workbooks: Workbook[],
   consultations: ConsultationRecord[]
 ): Promise<string> => {
-  // process.env.API_KEY가 없는 경우에 대한 명시적 체크
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY_MISSING");
+  // 호출 시점의 최신 API 키 확인
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("API_KEY_NOT_SET");
   }
 
-  // 매번 새로운 인스턴스를 생성하여 최신 API 키가 즉시 반영되도록 함
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // 매 호출마다 새로운 인스턴스를 생성하여 선택된 키가 즉시 반영되도록 함
+  const ai = new GoogleGenAI({ apiKey });
   
   const progressText = progress.length > 0 
     ? progress.map(p => {
@@ -43,20 +45,25 @@ export const generateConsultationSummary = async (
       config: {
         systemInstruction: "당신은 학원 운영 20년 차 베테랑 상담 전문가입니다. 학생의 진도와 교사 소견을 바탕으로 학부모님이 안심하고 감동하실 수 있는 학습 보고서를 작성합니다. 반드시 한국어로 작성하며, '~해요' 체를 사용하세요. 학생의 이름을 언급하며 구체적인 칭찬을 포함해 주세요.",
         temperature: 0.7,
-        topP: 0.95,
       }
     });
     
     if (!response.text) {
-      throw new Error("AI 응답 내용이 비어있습니다.");
+      throw new Error("응답을 받지 못했습니다.");
     }
     
     return response.text;
   } catch (error: any) {
-    console.error("Gemini API Error Details:", error);
+    const errorMsg = error.message || "";
+    console.error("Gemini API Error:", error);
     
-    if (error.message?.includes("API_KEY") || error.message?.includes("Key must be set")) {
-      throw new Error("API_KEY_MISSING");
+    // 특정 오류 코드 처리 (API 키 관련)
+    if (errorMsg.includes("API Key must be set") || errorMsg.includes("403") || errorMsg.includes("401")) {
+      throw new Error("API_KEY_INVALID");
+    }
+    
+    if (errorMsg.includes("Requested entity was not found")) {
+      throw new Error("ENTITY_NOT_FOUND");
     }
     
     throw error;

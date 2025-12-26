@@ -9,11 +9,15 @@ interface Props {
   user: User | null;
 }
 
-// Fixed: Updated the global declaration to use the existing AIStudio type 
-// to avoid conflicts with the environment's predefined Window interface.
+// Global interface for AI Studio tools
 declare global {
+  interface AIStudio {
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
+  }
   interface Window {
-    aistudio: AIStudio;
+    // Making aistudio optional to match potential pre-existing declarations in the global scope
+    aistudio?: AIStudio;
   }
 }
 
@@ -25,20 +29,65 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   const [hasAiKey, setHasAiKey] = useState<boolean>(true);
 
   useEffect(() => {
-    checkAiKey();
+    checkKeyStatus();
   }, []);
 
-  const checkAiKey = async () => {
+  const checkKeyStatus = async () => {
     if (window.aistudio) {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      setHasAiKey(hasKey);
+      const selected = await window.aistudio.hasSelectedApiKey();
+      setHasAiKey(selected);
     }
   };
 
-  const handleOpenAiKeySelector = async () => {
+  const handleSelectKey = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      setHasAiKey(true); // 선택했다고 가정하고 진행
+      // 선택 직후에는 성공했다고 가정하고 진행 (레이스 컨디션 방지)
+      setHasAiKey(true);
+    }
+  };
+
+  const handleGenerateAISummary = async (sId: string) => {
+    const student = state.students.find(s => s.id === sId);
+    if (!student) return;
+
+    // 1. 키 선택 여부 먼저 확인
+    const isKeySelected = window.aistudio ? await window.aistudio.hasSelectedApiKey() : true;
+    if (!isKeySelected) {
+      if (confirm('AI 기능을 사용하려면 먼저 API 키를 선택해야 합니다.\n(결제 정보가 있는 구글 프로젝트의 키를 선택해주세요. 무료 티어 사용 가능)')) {
+        await handleSelectKey();
+      }
+      return;
+    }
+
+    setIsSummarizing(sId);
+    
+    try {
+      const studentProgress = state.progress.filter(p => p.studentId === sId);
+      const studentConsultations = state.consultations.filter(c => c.studentId === sId);
+      
+      const result = await generateConsultationSummary(
+        student, 
+        studentProgress, 
+        state.workbooks, 
+        studentConsultations
+      );
+      
+      setSummary(prev => ({ ...prev, [sId]: result }));
+      setHasAiKey(true);
+    } catch (error: any) {
+      console.error("AI Summary Error:", error);
+      
+      if (error.message === "API_KEY_NOT_SET" || error.message === "API_KEY_INVALID" || error.message === "ENTITY_NOT_FOUND") {
+        setHasAiKey(false);
+        if (confirm('AI 키 설정에 문제가 있거나 권한이 없습니다. 다시 설정하시겠습니까?\n(오류 메시지: ' + error.message + ')')) {
+          await handleSelectKey();
+        }
+      } else {
+        alert(`AI 요약 중 오류가 발생했습니다: ${error.message}`);
+      }
+    } finally {
+      setIsSummarizing(null);
     }
   };
 
@@ -68,48 +117,6 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     alert('상담 일지가 등록되었습니다.');
   };
 
-  const handleGenerateAISummary = async (sId: string) => {
-    const student = state.students.find(s => s.id === sId);
-    if (!student) return;
-
-    // 키가 없는 경우 선택 창부터 띄움
-    if (!hasAiKey) {
-      if (confirm('AI 기능을 사용하려면 먼저 API 키를 선택해야 합니다. 선택 창을 여시겠습니까?')) {
-        await handleOpenAiKeySelector();
-      }
-      return;
-    }
-
-    setIsSummarizing(sId);
-    
-    try {
-      const studentProgress = state.progress.filter(p => p.studentId === sId);
-      const studentConsultations = state.consultations.filter(c => c.studentId === sId);
-      
-      const result = await generateConsultationSummary(
-        student, 
-        studentProgress, 
-        state.workbooks, 
-        studentConsultations
-      );
-      
-      setSummary(prev => ({ ...prev, [sId]: result }));
-    } catch (error: any) {
-      console.error("Summary generation error:", error);
-      
-      if (error.message === "API_KEY_MISSING") {
-        setHasAiKey(false);
-        if (confirm('AI 키 설정이 필요합니다. 지금 설정하시겠습니까?')) {
-          await handleOpenAiKeySelector();
-        }
-      } else {
-        alert(`AI 요약 중 오류가 발생했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
-      }
-    } finally {
-      setIsSummarizing(null);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -119,16 +126,15 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
         </div>
         {!hasAiKey && (
           <button 
-            onClick={handleOpenAiKeySelector}
-            className="bg-amber-100 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold border border-amber-200 hover:bg-amber-200 transition-colors flex items-center"
+            onClick={handleSelectKey}
+            className="bg-amber-100 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold border border-amber-200 hover:bg-amber-200 transition-colors flex items-center animate-bounce"
           >
-            <span className="mr-2">🔑</span> AI 기능 활성화 (키 선택)
+            <span className="mr-2">🔑</span> AI 기능 활성화 (클릭하여 키 선택)
           </button>
         )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Form */}
         <div className="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit sticky top-8">
           <h3 className="text-lg font-bold mb-4 text-slate-800">상담 기록 추가</h3>
           <form onSubmit={handleAddConsultation} className="space-y-4">
@@ -155,13 +161,12 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                 required
               />
             </div>
-            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 shadow-md">
+            <button type="submit" className="w-full bg-indigo-600 text-white font-bold py-2 rounded-lg hover:bg-indigo-700 shadow-md transition-all active:scale-95">
               일지 등록
             </button>
           </form>
         </div>
 
-        {/* List & AI Feature */}
         <div className="lg:col-span-8 space-y-6">
           {myStudents.map(student => {
             const history = state.consultations.filter(c => c.studentId === student.id).reverse();
@@ -190,7 +195,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                         작성 중...
                       </>
                     ) : (
-                      <span>{hasAiKey ? '✨ 학부모 전송용 요약' : '🔑 AI 키 설정 후 요약 가능'}</span>
+                      <span>✨ 학부모 전송용 요약</span>
                     )}
                   </button>
                 </div>
