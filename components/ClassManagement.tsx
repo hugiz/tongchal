@@ -43,6 +43,22 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
     setIsAdding(false);
   };
 
+  const handleUpdateClassWorkbooks = (classId: string, workbookId: string) => {
+    updateState(prev => ({
+      ...prev,
+      classes: prev.classes.map(c => {
+        if (c.id !== classId) return c;
+        const exists = c.workbooks.includes(workbookId);
+        return {
+          ...c,
+          workbooks: exists 
+            ? c.workbooks.filter(id => id !== workbookId)
+            : [...c.workbooks, workbookId]
+        };
+      })
+    }));
+  };
+
   const handleTeacherChange = (classId: string, newTeacherId: string) => {
     updateState(prev => ({
       ...prev,
@@ -94,7 +110,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">반 및 출석 관리</h2>
-          <p className="text-slate-500">학급을 관리하고 반별 공통 교재를 지정합니다.</p>
+          <p className="text-slate-500">학급별 공통 교재를 지정하면 반 소속 학생들에게 자동 연동됩니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -133,14 +149,14 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest">반 공통 학습 교재 선택</label>
+            <label className="block text-xs font-bold text-slate-400 mb-3 uppercase tracking-widest">초기 공통 교재 선택</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {state.workbooks.map(wb => (
                 <button
                   key={wb.id}
                   type="button"
                   onClick={() => toggleWorkbookSelection(wb.id)}
-                  className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all text-left ${
+                  className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all text-left ${
                     selectedWorkbookIds.includes(wb.id)
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
                     : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300'
@@ -150,7 +166,6 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 </button>
               ))}
             </div>
-            {state.workbooks.length === 0 && <p className="text-xs text-rose-400 font-bold mt-2">등록된 교재가 없습니다. '문제집 관리'에서 먼저 등록해주세요.</p>}
           </div>
 
           <button type="submit" className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-slate-700 active:scale-95 transition-all">학급 개설 완료</button>
@@ -205,12 +220,12 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                   <div className="flex flex-col items-end">
                     <p className="text-[10px] text-slate-300 font-black uppercase tracking-widest mb-1">Common Books</p>
                     <div className="flex -space-x-2">
-                      {cls.workbooks.slice(0, 3).map(wid => (
-                        <div key={wid} title={state.workbooks.find(w => w.id === wid)?.title} className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-slate-400">
+                      {cls.workbooks.map(wid => (
+                        <div key={wid} title={state.workbooks.find(w => w.id === wid)?.title} className="w-6 h-6 rounded-full bg-indigo-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-indigo-600">
                           {state.workbooks.find(w => w.id === wid)?.title[0]}
                         </div>
                       ))}
-                      {cls.workbooks.length > 3 && <div className="w-6 h-6 rounded-full bg-slate-800 border-2 border-white flex items-center justify-center text-[8px] font-bold text-white">+{cls.workbooks.length - 3}</div>}
+                      {cls.workbooks.length === 0 && <span className="text-[10px] text-slate-300 italic">없음</span>}
                     </div>
                   </div>
                   <div className="text-right border-l pl-6 border-slate-100">
@@ -239,29 +254,58 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
               {isExpanded && (
                 <div className="px-6 pb-8 pt-4 border-t border-slate-50 bg-slate-50/20 animate-in slide-in-from-top duration-300">
-                  <div className="mb-6">
-                    <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
-                      DAILY ATTENDANCE LOG ({today})
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {classStudents.map(student => {
-                        const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
-                        return (
-                          <div key={student.id} className="p-4 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">{student.name}</p>
-                              <p className="text-[10px] font-bold text-slate-300">{student.grade}</p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* 출석 체크 */}
+                    <div>
+                      <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></span>
+                        DAILY ATTENDANCE LOG ({today})
+                      </h5>
+                      <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                        {classStudents.map(student => {
+                          const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
+                          return (
+                            <div key={student.id} className="p-3 bg-white rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
+                              <span className="text-xs font-bold text-slate-700">{student.name}</span>
+                              <div className="flex space-x-1">
+                                <AttendanceBtn label="출석" active={att?.status === 'PRESENT'} color="bg-emerald-500" onClick={() => handleAttendance(student.id, cls.id, 'PRESENT')} />
+                                <AttendanceBtn label="지각" active={att?.status === 'LATE'} color="bg-amber-500" onClick={() => handleAttendance(student.id, cls.id, 'LATE')} />
+                                <AttendanceBtn label="결석" active={att?.status === 'ABSENT'} color="bg-rose-500" onClick={() => handleAttendance(student.id, cls.id, 'ABSENT')} />
+                              </div>
                             </div>
-                            <div className="flex space-x-1">
-                              <AttendanceBtn label="출석" active={att?.status === 'PRESENT'} color="bg-emerald-500" onClick={() => handleAttendance(student.id, cls.id, 'PRESENT')} />
-                              <AttendanceBtn label="지각" active={att?.status === 'LATE'} color="bg-amber-500" onClick={() => handleAttendance(student.id, cls.id, 'LATE')} />
-                              <AttendanceBtn label="결석" active={att?.status === 'ABSENT'} color="bg-rose-500" onClick={() => handleAttendance(student.id, cls.id, 'ABSENT')} />
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                        {classStudents.length === 0 && <p className="text-xs text-slate-300 italic py-4">배정된 학생이 없습니다.</p>}
+                      </div>
                     </div>
+
+                    {/* 공통 교재 편집 (원장님 전용) */}
+                    {isDirector && (
+                      <div>
+                        <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+                          EDIT COMMON WORKBOOKS
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          {state.workbooks.map(wb => {
+                            const isCommon = cls.workbooks.includes(wb.id);
+                            return (
+                              <button
+                                key={wb.id}
+                                onClick={(e) => { e.stopPropagation(); handleUpdateClassWorkbooks(cls.id, wb.id); }}
+                                className={`px-3 py-2 rounded-xl text-[10px] font-bold border transition-all text-left ${
+                                  isCommon
+                                  ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                                  : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-300'
+                                }`}
+                              >
+                                {isCommon ? '✓ ' : '+ '}{wb.title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -276,8 +320,8 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
 const AttendanceBtn = ({ label, active, color, onClick }: { label: string, active: boolean, color: string, onClick: () => void }) => (
   <button 
     onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all ${
-      active ? `${color} text-white shadow-lg scale-110 ring-2 ring-white` : 'bg-slate-50 text-slate-300 border border-slate-100 hover:border-slate-200'
+    className={`px-2.5 py-1.5 rounded-lg text-[9px] font-black transition-all ${
+      active ? `${color} text-white shadow-md scale-105` : 'bg-slate-50 text-slate-300 hover:border-slate-200'
     }`}
   >
     {label}

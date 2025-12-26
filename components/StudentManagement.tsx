@@ -79,7 +79,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">학생 관리</h2>
-          <p className="text-slate-500">원생 정보를 관리하고 개인별 교재를 추가합니다.</p>
+          <p className="text-slate-500">반에 배정하면 공통 교재가 자동 연결되며, 필요시 개인 교재를 추가할 수 있습니다.</p>
         </div>
         {isDirector && (
           <button 
@@ -140,8 +140,8 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
               <tr className="bg-slate-50/80 border-b border-slate-100">
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">이름</th>
                 <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학년</th>
-                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">배정 반</th>
-                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학습 교재</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">배정 반 (수정가능)</th>
+                <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">학습 교재 (🏛️반 / 👤개인)</th>
                 {isDirector && <th className="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">관리</th>}
               </tr>
             </thead>
@@ -165,7 +165,7 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                         <select 
                           value={student.classId}
                           onChange={(e) => handleClassChange(student.id, e.target.value)}
-                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-indigo-100"
+                          className="bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase px-2 py-1.5 rounded-xl border border-indigo-100 outline-none cursor-pointer hover:bg-indigo-100 transition-all"
                         >
                           <option value="">미배정</option>
                           {state.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -178,22 +178,22 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                     </td>
                     <td className="px-8 py-6 relative">
                       <div className="flex flex-wrap gap-1 items-center">
-                        {/* 반 공통 교재 */}
+                        {/* 반 공통 교재: 반 설정 시 자동 표시 */}
                         {classWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
-                          return <span key={wid} title="반 공통 교재" className="text-[9px] bg-indigo-50 text-indigo-400 font-bold px-2 py-0.5 rounded-lg border border-indigo-100">🏛️ {wb?.title}</span>;
+                          return <span key={wid} title="반 공통 교재 (자동 연동)" className="text-[9px] bg-indigo-50 text-indigo-500 font-bold px-2 py-0.5 rounded-lg border border-indigo-200">🏛️ {wb?.title}</span>;
                         })}
-                        {/* 개인 교재 */}
+                        {/* 개인 교재: 별도 추가분 */}
                         {individualWorkbooks.map(wid => {
                           const wb = state.workbooks.find(w => w.id === wid);
-                          return <span key={wid} title="개인 전용 교재" className="text-[9px] bg-amber-50 text-amber-500 font-bold px-2 py-0.5 rounded-lg border border-amber-100">👤 {wb?.title}</span>;
+                          return <span key={wid} title="개인 전용 교재" className="text-[9px] bg-amber-50 text-amber-500 font-bold px-2 py-0.5 rounded-lg border border-amber-200">👤 {wb?.title}</span>;
                         })}
                         {/* 추가 버튼 */}
                         <button 
                           onClick={() => setWbMenuStudentId(wbMenuStudentId === student.id ? null : student.id)}
-                          className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1"
+                          className="text-[9px] bg-slate-800 text-white font-black px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-all ml-1 shadow-sm active:scale-90"
                         >
-                          + 추가
+                          + 개인교재
                         </button>
                       </div>
 
@@ -220,11 +220,10 @@ const StudentManagement: React.FC<Props> = ({ state, updateState, user }) => {
                                     : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'
                                   }`}
                                 >
-                                  {wb.title}
+                                  {isIndividualWb ? '✓ ' : '+ '}{wb.title}
                                 </button>
                               );
                             })}
-                            {state.workbooks.length === 0 && <p className="text-[9px] text-slate-300 italic text-center py-4">등록된 교재가 없습니다.</p>}
                           </div>
                         </div>
                       )}
