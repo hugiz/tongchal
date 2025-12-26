@@ -127,14 +127,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               const isClassToday = (cls.attendanceDays || []).includes(dayName);
 
               return (
-                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
+                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50/80 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
                   <div className="p-6">
-                    <div className="flex justify-between items-start mb-5">
-                      <div className="relative">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-xl font-black transition-all ${isClassToday ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-50 text-indigo-400 shadow-slate-100'}`}>{cls.name[0]}</div>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex flex-col gap-3">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-xl font-black transition-all ${isClassToday ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-50 text-indigo-400 shadow-slate-100'}`}>
+                          {cls.name[0]}
+                        </div>
                         {isClassToday && (
-                          <div className="absolute top-16 left-0 whitespace-nowrap">
-                            <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm">✨ 오늘 수업</span>
+                          <div className="whitespace-nowrap">
+                            <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg shadow-sm animate-pulse">✨ 오늘 수업</span>
                           </div>
                         )}
                       </div>
@@ -144,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                         </span>
                       </div>
                     </div>
-                    <h4 className="font-black text-slate-800 text-xl mb-1 mt-6 md:mt-4">{cls.name}</h4>
+                    <h4 className="font-black text-slate-800 text-xl mb-1 mt-2">{cls.name}</h4>
                     <p className="text-xs text-slate-400 mb-8 font-bold">담당: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님</p>
                     <div className="grid grid-cols-3 gap-2 relative z-10">
                       <button onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }} className={`py-3 rounded-2xl text-[10px] font-black transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-100 text-slate-600'}`}>출석</button>
