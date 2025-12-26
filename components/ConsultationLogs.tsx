@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppState, User, ConsultationRecord } from '../types';
 import { generateConsultationSummary } from '../services/geminiService';
 
@@ -9,11 +9,38 @@ interface Props {
   user: User | null;
 }
 
+// Fixed: Updated the global declaration to use the existing AIStudio type 
+// to avoid conflicts with the environment's predefined Window interface.
+declare global {
+  interface Window {
+    aistudio: AIStudio;
+  }
+}
+
 const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   const [studentId, setStudentId] = useState('');
   const [note, setNote] = useState('');
   const [isSummarizing, setIsSummarizing] = useState<string | null>(null);
   const [summary, setSummary] = useState<{[key: string]: string}>({});
+  const [hasAiKey, setHasAiKey] = useState<boolean>(true);
+
+  useEffect(() => {
+    checkAiKey();
+  }, []);
+
+  const checkAiKey = async () => {
+    if (window.aistudio) {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      setHasAiKey(hasKey);
+    }
+  };
+
+  const handleOpenAiKeySelector = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasAiKey(true); // 선택했다고 가정하고 진행
+    }
+  };
 
   const teacherClasses = user?.role === 'DIRECTOR' 
     ? state.classes 
@@ -45,6 +72,14 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     const student = state.students.find(s => s.id === sId);
     if (!student) return;
 
+    // 키가 없는 경우 선택 창부터 띄움
+    if (!hasAiKey) {
+      if (confirm('AI 기능을 사용하려면 먼저 API 키를 선택해야 합니다. 선택 창을 여시겠습니까?')) {
+        await handleOpenAiKeySelector();
+      }
+      return;
+    }
+
     setIsSummarizing(sId);
     
     try {
@@ -61,7 +96,15 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       setSummary(prev => ({ ...prev, [sId]: result }));
     } catch (error: any) {
       console.error("Summary generation error:", error);
-      alert(`AI 요약 중 오류가 발생했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
+      
+      if (error.message === "API_KEY_MISSING") {
+        setHasAiKey(false);
+        if (confirm('AI 키 설정이 필요합니다. 지금 설정하시겠습니까?')) {
+          await handleOpenAiKeySelector();
+        }
+      } else {
+        alert(`AI 요약 중 오류가 발생했습니다.\n${error.message || '잠시 후 다시 시도해 주세요.'}`);
+      }
     } finally {
       setIsSummarizing(null);
     }
@@ -69,9 +112,19 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold text-slate-800">상담 일지</h2>
-        <p className="text-slate-500">학생 상담 내용을 기록하고 AI로 요약해보세요.</p>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">상담 일지</h2>
+          <p className="text-slate-500">학생 상담 내용을 기록하고 AI로 요약해보세요.</p>
+        </div>
+        {!hasAiKey && (
+          <button 
+            onClick={handleOpenAiKeySelector}
+            className="bg-amber-100 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold border border-amber-200 hover:bg-amber-200 transition-colors flex items-center"
+          >
+            <span className="mr-2">🔑</span> AI 기능 활성화 (키 선택)
+          </button>
+        )}
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -137,7 +190,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                         작성 중...
                       </>
                     ) : (
-                      <span>✨ 학부모 전송용 요약</span>
+                      <span>{hasAiKey ? '✨ 학부모 전송용 요약' : '🔑 AI 키 설정 후 요약 가능'}</span>
                     )}
                   </button>
                 </div>
