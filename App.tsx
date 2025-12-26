@@ -21,7 +21,6 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_STATE;
   });
 
-  // 로그인 상태 유지 기능 추가
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('edulog_user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -35,6 +34,22 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // URL 파라미터에서 클라우드 설정 가져오기 (선생님 초대용)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlParam = params.get('c_url');
+    const keyParam = params.get('c_key');
+
+    if (urlParam && keyParam) {
+      localStorage.setItem('edulog_cloud_url', decodeURIComponent(urlParam));
+      localStorage.setItem('edulog_cloud_key', decodeURIComponent(keyParam));
+      
+      // 파라미터 제거 후 페이지 새로고침하여 연결 시도
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+      window.location.reload();
+    }
+  }, []);
+
   useEffect(() => {
     const url = localStorage.getItem('edulog_cloud_url');
     const key = localStorage.getItem('edulog_cloud_key');
@@ -46,22 +61,20 @@ const App: React.FC = () => {
           const client = createClient(url, key);
           supabaseRef.current = client;
 
-          // 테이블 및 데이터 확인 시도
           const { data, error } = await client.from('app_sync').select('data').eq('id', 'global_state').single();
           
           if (error) {
             if (error.code === 'PGRST116' || error.message.includes('not found')) {
-              // 테이블은 있는데 데이터만 없는 경우 생성 시도
               const { error: upsertError } = await client.from('app_sync').upsert([{ id: 'global_state', data: state }]);
               if (upsertError) {
-                setCloudError(`보관함을 찾을 수 없거나 접근 권한이 없습니다. SQL 에디터에서 코드를 실행했는지 확인해주세요. (에러: ${upsertError.message})`);
+                setCloudError(`보관함 접근 권한 오류: ${upsertError.message}`);
                 setCloudStatus('OFFLINE');
               } else {
                 setCloudStatus('LIVE');
                 setCloudError(null);
               }
             } else {
-              setCloudError(`연결 실패: ${error.message}. 주소와 키를 다시 확인해주세요.`);
+              setCloudError(`연결 실패: ${error.message}`);
               setCloudStatus('OFFLINE');
             }
           } else {
@@ -72,7 +85,6 @@ const App: React.FC = () => {
             setCloudError(null);
           }
 
-          // 실시간 구독 설정
           client
             .channel('schema-db-changes')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync' }, (payload) => {

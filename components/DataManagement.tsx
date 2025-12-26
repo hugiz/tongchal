@@ -17,22 +17,9 @@ const DataManagement: React.FC<Props> = ({ state, updateState, cloudStatus, clou
 
   const isCloudLinked = cloudStatus === 'LIVE';
 
-  const sqlCode = `-- 1. 데이터 보관함 만들기
-create table if not exists app_sync (
-  id text primary key,
-  data jsonb,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 2. 보안 정책 초기화 (기존 정책 삭제 후 새로 생성)
-drop policy if exists "Allow public access" on app_sync;
-
--- 3. 보안 설정 (모든 기기에서 자유롭게 읽고 쓰기 허용)
-alter table app_sync enable row level security;
-create policy "Allow public access" on app_sync for all using (true) with check (true);`;
-
   useEffect(() => {
-    setCurrentHostname(window.location.origin);
+    // 호스트네임뿐만 아니라 현재 페이지의 전체 기본 경로를 가져옴
+    setCurrentHostname(window.location.origin + window.location.pathname);
   }, []);
 
   const handleSaveCloudConfig = () => {
@@ -50,7 +37,6 @@ create policy "Allow public access" on app_sync for all using (true) with check 
     localStorage.setItem('edulog_cloud_url', cloudUrl.trim());
     localStorage.setItem('edulog_cloud_key', cloudKey.trim());
     
-    // 로그인은 유지하되 앱의 Supabase 연결을 재설정하기 위해 새로고침
     setTimeout(() => {
       window.location.reload();
     }, 500);
@@ -60,6 +46,28 @@ create policy "Allow public access" on app_sync for all using (true) with check 
     navigator.clipboard.writeText(text);
     alert(msg);
   };
+
+  // 선생님들을 위한 자동 설정 링크 생성
+  const generateInviteLink = () => {
+    const baseUrl = window.location.origin + window.location.pathname;
+    const encodedUrl = encodeURIComponent(cloudUrl.trim());
+    const encodedKey = encodeURIComponent(cloudKey.trim());
+    return `${baseUrl}?c_url=${encodedUrl}&c_key=${encodedKey}`;
+  };
+
+  const sqlCode = `-- 1. 데이터 보관함 만들기
+create table if not exists app_sync (
+  id text primary key,
+  data jsonb,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 2. 보안 정책 초기화
+drop policy if exists "Allow public access" on app_sync;
+
+-- 3. 보안 설정
+alter table app_sync enable row level security;
+create policy "Allow public access" on app_sync for all using (true) with check (true);`;
 
   return (
     <div className="space-y-8 pb-20 max-w-4xl mx-auto">
@@ -73,9 +81,9 @@ create policy "Allow public access" on app_sync for all using (true) with check 
         <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
           <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">우리 학원 접속 주소</p>
           <div className="flex items-center space-x-3">
-            <span className="text-sm font-mono font-bold text-indigo-700">{currentHostname}</span>
+            <span className="text-sm font-mono font-bold text-indigo-700">{window.location.origin}</span>
             <button 
-              onClick={() => copyToClipboard(currentHostname, '학원 주소가 복사되었습니다!')}
+              onClick={() => copyToClipboard(window.location.origin, '학원 주소가 복사되었습니다!')}
               className="bg-white p-1.5 rounded-lg border border-indigo-200 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all shadow-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,10 +94,37 @@ create policy "Allow public access" on app_sync for all using (true) with check 
         </div>
       </header>
 
+      {/* 초대용 매직 링크 섹션 (새로 추가) */}
+      {isCloudLinked && (
+        <section className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-xl animate-in fade-in zoom-in duration-500">
+          <div className="flex items-start space-x-5">
+            <div className="bg-white/20 p-4 rounded-2xl text-3xl">✉️</div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold mb-2">선생님 초대하기 (자동 설정)</h3>
+              <p className="text-indigo-100 text-sm mb-6 leading-relaxed">
+                다른 선생님들께 아래 링크를 보내주세요. 링크를 클릭하면 <b>주소나 키를 입력할 필요 없이</b> 자동으로 원장님의 학원 시스템에 연결됩니다.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button 
+                  onClick={() => copyToClipboard(generateInviteLink(), '선생님 초대용 자동 설정 링크가 복사되었습니다! 카톡으로 전달하세요.')}
+                  className="bg-white text-indigo-700 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center justify-center space-x-2 active:scale-95"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  <span>초대 링크 복사하기</span>
+                </button>
+              </div>
+              <p className="mt-4 text-[10px] text-indigo-200 italic">※ 주의: 이 링크에는 보안용 열쇠 정보가 포함되어 있으므로 외부 유출에 주의하세요.</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* 실시간 공유 상태 알림 */}
-      <div className={`p-8 rounded-3xl border transition-all ${isCloudLinked ? 'bg-emerald-500 text-white border-emerald-400 shadow-emerald-100' : (cloudStatus === 'CONNECTING' ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-rose-50 border-rose-200')} shadow-2xl`}>
+      <div className={`p-8 rounded-3xl border transition-all ${isCloudLinked ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : (cloudStatus === 'CONNECTING' ? 'bg-amber-400 text-amber-900 border-amber-300' : 'bg-rose-50 border-rose-200')} shadow-sm`}>
         <div className="flex items-center space-x-5">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${isCloudLinked ? 'bg-white text-emerald-500' : 'bg-white shadow-sm'}`}>
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${isCloudLinked ? 'bg-emerald-500 text-white shadow-lg' : 'bg-white shadow-sm'}`}>
             {isCloudLinked ? '📡' : (cloudStatus === 'CONNECTING' ? '⏳' : '⚠️')}
           </div>
           <div className="flex-1">
@@ -101,18 +136,18 @@ create policy "Allow public access" on app_sync for all using (true) with check 
                 <strong className="block mb-1">🛠️ 문제 발생:</strong> {cloudError}
               </div>
             )}
-            <p className={`text-sm mt-1 ${isCloudLinked ? 'text-emerald-100' : 'text-slate-500'}`}>
+            <p className={`text-sm mt-1 ${isCloudLinked ? 'text-emerald-600' : 'text-slate-500'}`}>
               {isCloudLinked 
-                ? '축하합니다! 이제 모든 기기에서 데이터가 실시간으로 공유됩니다.'
+                ? '현재 모든 기기에서 데이터가 실시간으로 공유되고 있습니다.'
                 : '아래 가이드에 따라 주소/열쇠 입력과 보관함 생성을 완료해 주세요.'}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-8 opacity-60 hover:opacity-100 transition-opacity">
         {/* Step 1 */}
-        <section className={`rounded-3xl p-8 bg-slate-800 text-white shadow-xl transition-all`}>
+        <section className={`rounded-3xl p-8 bg-slate-800 text-white shadow-xl`}>
           <h3 className="text-xl font-bold mb-6 flex items-center">
             <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm bg-indigo-500 text-white`}>1</span>
             클라우드 정보 입력 (URL/Key)
@@ -136,7 +171,7 @@ create policy "Allow public access" on app_sync for all using (true) with check 
                   value={cloudKey}
                   onChange={e => setCloudKey(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-indigo-300 outline-none focus:border-indigo-500 transition-all"
-                  placeholder="공개 API 키를 넣어주세요"
+                  placeholder="공개 API 키"
                 />
               </div>
             </div>
@@ -147,56 +182,9 @@ create policy "Allow public access" on app_sync for all using (true) with check 
             >
               {isSaving ? '저장 중...' : '연결 정보 저장 및 다시 시도'}
             </button>
-            <p className="text-[10px] text-slate-400 text-center">※ 저장 버튼을 누르면 로그인은 유지된 채로 연결을 다시 시도합니다.</p>
-          </div>
-        </section>
-
-        {/* Step 2 */}
-        <section className={`bg-white rounded-3xl p-8 border transition-all ${isCloudLinked ? 'border-slate-100 opacity-50' : 'border-indigo-200 shadow-lg'}`}>
-          <h3 className="text-xl font-bold mb-4 flex items-center text-slate-800">
-            <span className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm ${isCloudLinked ? 'bg-slate-100 text-slate-400' : 'bg-indigo-600 text-white'}`}>2</span>
-            수파베이스 보관함 생성 (SQL 실행)
-          </h3>
-          <div className="space-y-6">
-            <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
-              <h4 className="font-bold text-indigo-800 text-sm mb-2">💡 연결이 계속 안 된다면?</h4>
-              <p className="text-xs text-indigo-600 leading-relaxed">
-                정보를 정확히 넣었는데도 오류가 뜬다면, 아래 코드를 복사해 수파베이스의 <b>SQL Editor</b>에서 실행했는지 확인해 주세요. (이미 실행했더라도 다시 한번 실행하면 권한 설정이 초기화되어 해결될 수 있습니다.)
-              </p>
-            </div>
-            
-            <div className="relative group">
-              <div className="absolute -top-3 left-6 bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold uppercase">SQL 코드</div>
-              <pre className="bg-slate-900 text-indigo-300 p-6 rounded-2xl text-[11px] overflow-x-auto font-mono leading-relaxed pt-8">
-                {sqlCode}
-              </pre>
-              <button 
-                onClick={() => copyToClipboard(sqlCode, 'SQL 코드가 복사되었습니다!')}
-                className="absolute top-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-500 transition-all shadow-xl active:scale-95"
-              >
-                코드 전체 복사하기
-              </button>
-            </div>
           </div>
         </section>
       </div>
-
-      {(cloudStatus === 'LIVE' || cloudStatus === 'OFFLINE') && localStorage.getItem('edulog_cloud_url') && (
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center">
-          <button 
-            onClick={() => {
-              if (confirm('연결 정보를 초기화하시겠습니까? 데이터는 클라우드에 보관되지만 이 기기에서의 연결 설정은 삭제됩니다.')) {
-                localStorage.removeItem('edulog_cloud_url');
-                localStorage.removeItem('edulog_cloud_key');
-                window.location.reload();
-              }
-            }}
-            className="px-8 py-3 bg-rose-50 text-rose-500 rounded-xl font-bold hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-          >
-            설정 초기화 (전부 지우고 다시 시작)
-          </button>
-        </div>
-      )}
     </div>
   );
 };
