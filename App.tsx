@@ -180,13 +180,15 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
-      {/* 모바일용 메뉴 버튼 - 왼쪽 상단으로 이동 */}
+      {/* 모바일용 메뉴 버튼 - 미니멀한 SVG 디자인으로 개선 */}
       {currentUser && (
         <button 
           onClick={() => setIsMenuOpen(true)}
-          className={`md:hidden fixed top-4 left-4 z-[40] bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg transition-opacity ${isMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`md:hidden fixed top-4 left-4 z-[40] bg-white text-indigo-600 p-3 rounded-2xl shadow-xl shadow-indigo-100 border border-indigo-50 transition-all active:scale-90 ${isMenuOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
         >
-          <span className="text-xl">☰</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
         </button>
       )}
 
@@ -195,31 +197,39 @@ const App: React.FC = () => {
           {/* 모바일 전용 배경 오버레이 */}
           {isMenuOpen && (
             <div 
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[50] md:hidden"
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[50] md:hidden animate-in fade-in duration-300"
               onClick={() => setIsMenuOpen(false)}
             />
           )}
 
           <aside className={`
-            fixed inset-y-0 left-0 z-[60] w-64 bg-indigo-700 text-white flex flex-col shadow-2xl transition-transform duration-300 ease-in-out
-            md:static md:translate-x-0 md:h-screen md:shadow-xl
+            fixed inset-y-0 left-0 z-[60] w-72 bg-indigo-700 text-white flex flex-col shadow-2xl transition-transform duration-500 cubic-bezier(0.4, 0, 0.2, 1)
+            md:static md:translate-x-0 md:h-screen md:w-64 md:shadow-xl
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           `}>
-            {/* 사이드바 내부 닫기 버튼 (모바일용) */}
+            {/* 사이드바 내부 닫기 버튼 - 스타일 개선 */}
             <button 
               onClick={() => setIsMenuOpen(false)}
-              className="md:hidden absolute top-5 right-5 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              className="md:hidden absolute top-6 right-6 w-12 h-12 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-2xl transition-all active:rotate-90"
             >
-              <span className="text-2xl font-light">✕</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
-            <div className="p-6">
-              <h1 className="text-2xl font-bold tracking-tight">EduLog</h1>
-              <div className="mt-2" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
+            <div className="p-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                  <span className="text-indigo-700 font-black text-lg">T</span>
+                </div>
+                <h1 className="text-2xl font-black tracking-tight italic">EduLog</h1>
+              </div>
+              <div className="mt-4" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
             </div>
             
-            <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
+            <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto">
               <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
+              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">학원 관리</div>
               {isDirector && (
                 <>
                   <SidebarItem to="/teachers" icon="👩‍🏫" label="교사 관리" active={location.pathname === '/teachers'} onClick={() => setIsMenuOpen(false)} />
@@ -229,30 +239,37 @@ const App: React.FC = () => {
               <SidebarItem to="/students" icon="👥" label="학생 관리" active={location.pathname === '/students'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/workbooks" icon="📚" label="문제집 관리" active={location.pathname === '/workbooks'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/classes" icon="🏫" label="반 및 출석 관리" active={location.pathname === '/classes'} onClick={() => setIsMenuOpen(false)} />
+              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">학습 기록</div>
               <SidebarItem to="/learning" icon="✍️" label="학습 현황 기록" active={location.pathname === '/learning'} onClick={() => setIsMenuOpen(false)} />
               <SidebarItem to="/consultation" icon="📋" label="상담 일지" active={location.pathname === '/consultation'} onClick={() => setIsMenuOpen(false)} />
+              <div className="pt-4 pb-2 px-4 text-[10px] font-black text-indigo-300 uppercase tracking-widest">계정 설정</div>
               <SidebarItem to="/account" icon="⚙️" label="내 정보 관리" active={location.pathname === '/account'} onClick={() => setIsMenuOpen(false)} />
             </nav>
 
-            <div className="p-4 border-t border-indigo-600 bg-indigo-800/50">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center font-bold text-white uppercase">{sidebarName?.[0] || 'U'}</div>
+            <div className="p-6 border-t border-indigo-600 bg-indigo-800/40">
+              <div className="flex items-center space-x-3 mb-5">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-400 border border-indigo-300/30 flex items-center justify-center font-black text-white shadow-lg">{sidebarName?.[0] || 'U'}</div>
                 <div className="overflow-hidden">
-                  <p className="text-sm font-bold truncate">{sidebarName}</p>
-                  {needsLabel && <p className="text-[10px] text-indigo-300 uppercase">{roleLabel}</p>}
+                  <p className="text-sm font-black truncate leading-tight">{sidebarName}</p>
+                  {needsLabel && <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">{roleLabel}</p>}
                 </div>
               </div>
-              <button onClick={handleLogout} className="w-full py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-xs font-bold transition-all">로그아웃</button>
+              <button onClick={handleLogout} className="w-full py-3 bg-white/10 hover:bg-rose-500 rounded-xl text-xs font-black transition-all border border-white/5 flex items-center justify-center gap-2">
+                <span>🚪</span> 로그아웃
+              </button>
             </div>
           </aside>
         </>
       )}
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full pt-16 md:pt-8">
+      <main className="flex-1 overflow-y-auto p-5 md:p-10 max-w-7xl mx-auto w-full pt-20 md:pt-10">
         {cloudError && (
-          <div className="mb-6 p-4 bg-rose-50 text-rose-700 text-sm rounded-2xl border border-rose-200 flex justify-between items-center">
-            <span>⚠️ {cloudError}</span>
-            <button onClick={() => setCloudError(null)} className="font-bold ml-4">✕</button>
+          <div className="mb-8 p-5 bg-rose-50 text-rose-700 text-sm rounded-3xl border border-rose-200 flex justify-between items-center shadow-lg shadow-rose-500/5">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">⚠️</span>
+              <span className="font-medium">{cloudError}</span>
+            </div>
+            <button onClick={() => setCloudError(null)} className="bg-rose-100 hover:bg-rose-200 p-2 rounded-xl transition-all">✕</button>
           </div>
         )}
         <Routes>
@@ -273,19 +290,20 @@ const App: React.FC = () => {
 };
 
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
-  <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${
-    status === 'LIVE' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 
-    status === 'CONNECTING' ? 'bg-amber-500 text-white animate-pulse' : 
-    'bg-rose-500 text-white'
+  <div className={`flex items-center space-x-2 px-3.5 py-2 rounded-2xl text-[10px] font-black transition-all border ${
+    status === 'LIVE' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-400/20 shadow-lg shadow-emerald-500/10' : 
+    status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-300 border-amber-400/20 animate-pulse' : 
+    'bg-rose-500/10 text-rose-300 border-rose-400/20'
   }`}>
-    <span>{status === 'LIVE' ? '● 실시간 연동 중' : status === 'CONNECTING' ? '◌ 동기화 확인 중...' : '○ 오프라인 모드'}</span>
+    <span className={`w-2 h-2 rounded-full ${status === 'LIVE' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : status === 'CONNECTING' ? 'bg-amber-400' : 'bg-rose-400'}`}></span>
+    <span className="tracking-tight uppercase">{status === 'LIVE' ? 'Cloud Synchronized' : status === 'CONNECTING' ? 'Syncing...' : 'Local Only'}</span>
   </div>
 );
 
 const SidebarItem = ({ to, icon, label, active, onClick }: { to: string, icon: string, label: string, active: boolean, onClick: () => void }) => (
-  <Link to={to} onClick={onClick} className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${active ? 'bg-white text-indigo-700 shadow-md' : 'text-indigo-100 hover:bg-indigo-600'}`}>
-    <span>{icon}</span>
-    <span className="font-bold">{label}</span>
+  <Link to={to} onClick={onClick} className={`flex items-center space-x-3.5 px-5 py-3.5 rounded-2xl transition-all group ${active ? 'bg-white text-indigo-700 shadow-xl shadow-indigo-900/20 font-black' : 'text-indigo-100 hover:bg-white/10 font-bold'}`}>
+    <span className={`text-lg transition-transform group-hover:scale-125 ${active ? 'filter-none' : 'filter-none'}`}>{icon}</span>
+    <span className="tracking-tight">{label}</span>
   </Link>
 );
 
