@@ -124,7 +124,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               const isClassToday = (cls.attendanceDays || []).includes(dayName);
 
               return (
-                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
+                <div key={cls.id} className={`bg-white rounded-[32px] border transition-all overflow-hidden relative group/card ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50/80 shadow-md shadow-amber-200/20' : 'border-slate-100 hover:shadow-xl'}`}>
                   <div className="p-6">
                     <div className="flex justify-between items-start mb-5">
                       <div className="relative">

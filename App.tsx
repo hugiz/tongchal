@@ -200,7 +200,7 @@ const App: React.FC = () => {
               </svg>
             </button>
 
-            <div className="p-7 pb-3">
+            <div className="p-6 pb-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
                   <span className="text-indigo-700 font-black text-sm">T</span>
@@ -210,7 +210,7 @@ const App: React.FC = () => {
               <div className="mt-4" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
             </div>
             
-            <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
               <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
               <div className="pt-3 pb-1 px-4 text-[9px] font-black text-indigo-300 uppercase tracking-widest opacity-80">학원 관리</div>
               {isDirector && (
