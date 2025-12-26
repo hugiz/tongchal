@@ -12,6 +12,9 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
   const [activeActionClass, setActiveActionClass] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'LEARNING' | 'CONSULTATION'>('ATTENDANCE');
+  
+  // 학생별로 선택된 문제집 ID를 관리
+  const [selectedWorkbooks, setSelectedWorkbooks] = useState<{[key: string]: string}>({});
 
   const isDirector = user?.role === 'DIRECTOR';
   const today = new Date().toISOString().split('T')[0];
@@ -33,7 +36,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
 
   const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316'];
 
-  // Quick Action Handlers
+  // Attendance Handler
   const handleAttendance = (studentId: string, classId: string, status: AttendanceStatus) => {
     updateState(prev => {
       const existingIdx = prev.attendance.findIndex(a => a.studentId === studentId && a.date === today);
@@ -47,6 +50,30 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     });
   };
 
+  // Learning Progress Handler
+  const handleUpdateProgress = (studentId: string, workbookId: string, pageStr: string) => {
+    const page = parseInt(pageStr);
+    if (!workbookId) {
+      alert('문제집을 먼저 선택해주세요.');
+      return;
+    }
+    if (isNaN(page) || page <= 0) {
+      alert('올바른 페이지 번호를 입력해주세요.');
+      return;
+    }
+    
+    const newProgress: ProgressRecord = { 
+      id: 'p' + Date.now() + Math.random(), 
+      studentId, 
+      workbookId, 
+      currentPage: page, 
+      date: today 
+    };
+    
+    updateState(prev => ({ ...prev, progress: [...prev.progress, newProgress] }));
+    alert('학습 진도가 기록되었습니다.');
+  };
+
   return (
     <div className="space-y-8 pb-20">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -55,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           <p className="text-slate-500">{isDirector ? '학원 전체의 오늘을 관리합니다.' : '오늘 담당하시는 수업 현황입니다.'}</p>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-          <span className="text-xs font-bold text-slate-400 px-2 uppercase">Today</span>
+          <span className="text-xs font-bold text-slate-400 px-2 uppercase tracking-tighter">Current Date</span>
           <span className="text-sm font-bold text-indigo-600 px-2">{today}</span>
         </div>
       </header>
@@ -64,12 +91,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title={isDirector ? "전체 학생 수" : "담당 학생 수"} value={visibleStudents.length} icon="👥" color="bg-indigo-500" />
         <StatCard title="오늘의 반" value={visibleClasses.length} icon="🏫" color="bg-emerald-500" />
-        <StatCard title="출석 완료" value={state.attendance.filter(a => a.date === today && a.status === 'PRESENT' && visibleStudentIds.includes(a.studentId)).length} icon="✅" color="bg-amber-500" />
-        <StatCard title="상담 대기" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
+        <StatCard title="오늘 등원" value={state.attendance.filter(a => a.date === today && a.status === 'PRESENT' && visibleStudentIds.includes(a.studentId)).length} icon="✅" color="bg-amber-500" />
+        <StatCard title="미상담 학생" value={visibleStudents.length - state.consultations.filter(c => c.date === today && visibleStudentIds.includes(c.studentId)).length} icon="📝" color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Class List & Quick Actions */}
         <div className="lg:col-span-8 space-y-6">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
             <span className="w-2 h-6 bg-indigo-600 rounded-full"></span>
@@ -83,106 +109,145 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               const isSelected = activeActionClass === cls.id;
 
               return (
-                <div key={cls.id} className={`bg-white rounded-3xl border transition-all ${isSelected ? 'border-indigo-500 shadow-xl ring-4 ring-indigo-50' : 'border-slate-100 hover:shadow-md'}`}>
+                <div key={cls.id} className={`bg-white rounded-3xl border transition-all overflow-hidden ${isSelected ? 'border-indigo-500 shadow-xl ring-4 ring-indigo-50' : 'border-slate-100 hover:shadow-md'}`}>
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-xl shadow-inner">🏫</div>
+                      <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-xl shadow-inner font-bold text-indigo-600">{cls.name[0]}</div>
                       <div className="text-right">
                         <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-wider">
-                          {presentCount}/{classStudents.length} 등원
+                          {presentCount}/{classStudents.length} 등원 완료
                         </span>
                       </div>
                     </div>
                     <h4 className="font-bold text-slate-800 text-lg mb-1">{cls.name}</h4>
-                    <p className="text-xs text-slate-400 mb-6 font-medium">담당: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님</p>
+                    <p className="text-xs text-slate-400 mb-6 font-medium">담당 교사: {state.users.find(u => u.id === cls.teacherId)?.name} 선생님</p>
                     
                     <div className="grid grid-cols-3 gap-2">
                       <button 
                         onClick={() => { setActiveActionClass(isSelected && activeTab === 'ATTENDANCE' ? null : cls.id); setActiveTab('ATTENDANCE'); }}
                         className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'ATTENDANCE' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        출석체크
+                        출석
                       </button>
                       <button 
                         onClick={() => { setActiveActionClass(isSelected && activeTab === 'LEARNING' ? null : cls.id); setActiveTab('LEARNING'); }}
                         className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'LEARNING' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        학습기록
+                        학습
                       </button>
                       <button 
                         onClick={() => { setActiveActionClass(isSelected && activeTab === 'CONSULTATION' ? null : cls.id); setActiveTab('CONSULTATION'); }}
                         className={`py-2.5 rounded-xl text-[10px] font-bold transition-all ${isSelected && activeTab === 'CONSULTATION' ? 'bg-rose-600 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        상담기록
+                        상담
                       </button>
                     </div>
                   </div>
 
                   {/* Quick Action Panel */}
                   {isSelected && (
-                    <div className="border-t border-slate-50 p-5 bg-slate-50/30 animate-in slide-in-from-top duration-300">
+                    <div className="border-t border-slate-50 p-5 bg-slate-50/40 animate-in slide-in-from-top duration-300">
                       <div className="space-y-3">
-                        {classStudents.map(student => (
-                          <div key={student.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm">
-                            <span className="text-sm font-bold text-slate-700">{student.name}</span>
-                            
-                            {activeTab === 'ATTENDANCE' && (
-                              <div className="flex gap-1">
-                                {['PRESENT', 'LATE', 'ABSENT'].map(status => {
-                                  const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
-                                  const label = status === 'PRESENT' ? '출석' : status === 'LATE' ? '지각' : '결석';
-                                  const activeColor = status === 'PRESENT' ? 'bg-emerald-500' : status === 'LATE' ? 'bg-amber-500' : 'bg-rose-500';
-                                  return (
+                        {classStudents.map(student => {
+                          const studentClass = state.classes.find(c => c.id === student.classId);
+                          const classWorkbooks = state.workbooks.filter(w => studentClass?.workbooks.includes(w.id));
+                          const individualWorkbooks = state.workbooks.filter(w => student.workbooks.includes(w.id));
+                          const allAvailableWbs = [...classWorkbooks, ...individualWorkbooks];
+                          
+                          // 현재 선택된 문제집 ID
+                          const currentSelectedWbId = selectedWorkbooks[student.id] || (allAvailableWbs[0]?.id || '');
+
+                          return (
+                            <div key={student.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm flex-wrap gap-2">
+                              <span className="text-sm font-bold text-slate-700 min-w-[60px]">{student.name}</span>
+                              
+                              {activeTab === 'ATTENDANCE' && (
+                                <div className="flex gap-1">
+                                  {['PRESENT', 'LATE', 'ABSENT'].map(status => {
+                                    const att = state.attendance.find(a => a.studentId === student.id && a.date === today);
+                                    const label = status === 'PRESENT' ? '출석' : status === 'LATE' ? '지각' : '결석';
+                                    const activeColor = status === 'PRESENT' ? 'bg-emerald-500' : status === 'LATE' ? 'bg-amber-500' : 'bg-rose-500';
+                                    return (
+                                      <button 
+                                        key={status}
+                                        onClick={() => handleAttendance(student.id, cls.id, status as AttendanceStatus)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${att?.status === status ? `${activeColor} text-white shadow-md scale-105` : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                                      >
+                                        {label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {activeTab === 'LEARNING' && (
+                                <div className="flex items-center gap-2 flex-1 min-w-[200px] justify-end">
+                                  <select 
+                                    className="text-[10px] font-bold text-slate-600 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 outline-none max-w-[140px] truncate"
+                                    value={currentSelectedWbId}
+                                    onChange={(e) => setSelectedWorkbooks({...selectedWorkbooks, [student.id]: e.target.value})}
+                                  >
+                                    <option value="">문제집 선택</option>
+                                    {classWorkbooks.length > 0 && (
+                                      <optgroup label="🏛️ 반 공통">
+                                        {classWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
+                                      </optgroup>
+                                    )}
+                                    {individualWorkbooks.length > 0 && (
+                                      <optgroup label="👤 개인 전용">
+                                        {individualWorkbooks.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
+                                      </optgroup>
+                                    )}
+                                  </select>
+                                  <div className="flex items-center">
+                                    <input 
+                                      type="number" 
+                                      placeholder="P"
+                                      className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-right"
+                                      onKeyDown={(e) => {
+                                        if(e.key === 'Enter') {
+                                          handleUpdateProgress(student.id, currentSelectedWbId, e.currentTarget.value);
+                                          e.currentTarget.value = '';
+                                        }
+                                      }}
+                                    />
                                     <button 
-                                      key={status}
-                                      onClick={() => handleAttendance(student.id, cls.id, status as AttendanceStatus)}
-                                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${att?.status === status ? `${activeColor} text-white shadow-md scale-105` : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                                      className="ml-1 p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all"
+                                      onClick={(e) => {
+                                        const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                        handleUpdateProgress(student.id, currentSelectedWbId, input.value);
+                                        input.value = '';
+                                      }}
                                     >
-                                      {label}
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      </svg>
                                     </button>
-                                  );
-                                })}
-                              </div>
-                            )}
+                                  </div>
+                                </div>
+                              )}
 
-                            {activeTab === 'LEARNING' && (
-                              <div className="flex items-center gap-2">
-                                <input 
-                                  type="number" 
-                                  placeholder="p"
-                                  className="w-16 px-2 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-emerald-500"
-                                  onBlur={(e) => {
-                                    if(!e.target.value) return;
-                                    const firstWb = student.workbooks[0];
-                                    if(!firstWb) return;
-                                    const newProgress: ProgressRecord = { id: 'p'+Date.now()+Math.random(), studentId: student.id, workbookId: firstWb, currentPage: parseInt(e.target.value), date: today };
-                                    updateState(prev => ({ ...prev, progress: [...prev.progress, newProgress] }));
-                                    e.target.value = '';
-                                  }}
-                                />
-                                <span className="text-[10px] font-bold text-slate-300">P.기록</span>
-                              </div>
-                            )}
-
-                            {activeTab === 'CONSULTATION' && (
-                              <div className="flex-1 ml-4">
-                                <input 
-                                  type="text" 
-                                  placeholder="관찰 메모 입력 후 Enter"
-                                  className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-rose-500"
-                                  onKeyDown={(e) => {
-                                    if(e.key === 'Enter' && e.currentTarget.value) {
-                                      const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today };
-                                      updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] }));
-                                      e.currentTarget.value = '';
-                                      alert(`${student.name} 상담 기록 완료`);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              {activeTab === 'CONSULTATION' && (
+                                <div className="flex-1 ml-4">
+                                  <input 
+                                    type="text" 
+                                    placeholder="관찰 소견 입력 후 Enter"
+                                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:ring-2 focus:ring-rose-500"
+                                    onKeyDown={(e) => {
+                                      if(e.key === 'Enter' && e.currentTarget.value) {
+                                        const newCons: ConsultationRecord = { id: 'c'+Date.now()+Math.random(), studentId: student.id, teacherId: user?.id || '', note: e.currentTarget.value, date: today };
+                                        updateState(prev => ({ ...prev, consultations: [...prev.consultations, newCons] }));
+                                        e.currentTarget.value = '';
+                                        alert(`${student.name} 학생 상담 관찰 기록 완료`);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {classStudents.length === 0 && <p className="text-center py-4 text-slate-300 text-xs italic">현재 이 반에 배정된 학생이 없습니다.</p>}
                       </div>
                     </div>
                   )}
@@ -192,7 +257,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           </div>
         </div>
 
-        {/* Grade Chart & Recent List */}
+        {/* Analytics Section */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
             <h3 className="text-sm font-bold mb-6 text-slate-800 uppercase tracking-widest">학년별 분포</h3>
@@ -204,7 +269,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 700, fill: '#94a3b8'}} />
                     <YAxis hide />
                     <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
-                    <Bar dataKey="value" radius={[6, 6, 6, 6]} barSize={20}>
+                    <Bar dataKey="value" radius={[6, 6, 6, 6]} barSize={24}>
                       {gradeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
@@ -227,7 +292,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                 const student = state.students.find(s => s.id === c.studentId);
                 return (
                   <div key={c.id} className="flex items-start space-x-3 p-3 rounded-2xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-xs font-bold text-indigo-600">
+                    <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-indigo-600 shadow-sm">
                       {student?.name[0]}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -240,8 +305,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                   </div>
                 );
               })}
-              {state.consultations.length === 0 && (
-                <p className="text-center text-[10px] text-slate-400 py-10 font-bold">최근 상담 내역이 없습니다.</p>
+              {state.consultations.filter(c => visibleStudentIds.includes(c.studentId)).length === 0 && (
+                <p className="text-center text-[10px] text-slate-400 py-10 font-bold italic">담당 학생의 상담 내역이 없습니다.</p>
               )}
             </div>
           </div>
