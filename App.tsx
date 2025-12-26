@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Routes, Route, useNavigate, Link, useLocation } from 'react-router-dom';
 import { AppState, User } from './types';
 import { INITIAL_STATE } from './constants';
@@ -61,6 +61,24 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 클라우드에서 최신 데이터를 강제로 가져오는 함수
+  const refreshFromCloud = useCallback(async () => {
+    if (!supabaseRef.current) return;
+    try {
+      setCloudStatus('CONNECTING');
+      const { data, error } = await supabaseRef.current.from('app_sync').select('data').eq('id', 'global_state').single();
+      if (error) throw error;
+      if (data && data.data) {
+        setState(data.data);
+        setCloudStatus('LIVE');
+        console.log("Cloud data refreshed successfully");
+      }
+    } catch (err: any) {
+      setCloudError(`새로고침 실패: ${err.message}`);
+      setCloudStatus('OFFLINE');
+    }
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlParam = params.get('c_url');
@@ -108,6 +126,7 @@ const App: React.FC = () => {
             .channel('global-changes')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync', filter: 'id=eq.global_state' }, (payload) => {
               if (payload.new && payload.new.data) {
+                // 원장님이 보고 계실 때 다른 기기에서 수정되면 즉시 반영
                 setState(payload.new.data);
               }
             })
@@ -124,6 +143,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('edulog_state', JSON.stringify(state));
+    // 데이터 변경 시 클라우드에 푸시
     if (!isInitialFetch.current && cloudStatus === 'LIVE' && supabaseRef.current) {
       supabaseRef.current.from('app_sync').update({ data: state }).eq('id', 'global_state')
         .then(({ error }) => {
@@ -157,10 +177,8 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} users={state.users} />;
   }
 
-  // 사이드바용 호칭 로직 수정
   const isDirector = currentUser?.role === 'DIRECTOR';
   const roleLabel = isDirector ? '원장' : '선생님';
-  // 이름에 이미 '원장'이나 '선생님'이 포함되어 있으면 그대로 사용
   const sidebarName = currentUser?.name || '';
   const needsLabel = !sidebarName.includes(roleLabel);
 
@@ -181,7 +199,7 @@ const App: React.FC = () => {
         `}>
           <div className="p-6">
             <h1 className="text-2xl font-bold tracking-tight">EduLog</h1>
-            <div className="mt-2"><CloudBadge status={cloudStatus} /></div>
+            <div className="mt-2" title="데이터 연동 상태"><CloudBadge status={cloudStatus} /></div>
           </div>
           
           <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
@@ -214,13 +232,18 @@ const App: React.FC = () => {
       )}
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-7xl mx-auto w-full">
-        {cloudError && <div className="mb-6 p-4 bg-rose-50 text-rose-700 text-sm rounded-2xl border border-rose-200">⚠️ {cloudError}</div>}
+        {cloudError && (
+          <div className="mb-6 p-4 bg-rose-50 text-rose-700 text-sm rounded-2xl border border-rose-200 flex justify-between items-center animate-in fade-in slide-in-from-top-2">
+            <span>⚠️ {cloudError}</span>
+            <button onClick={() => setCloudError(null)} className="font-bold ml-4">✕</button>
+          </div>
+        )}
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} users={state.users} />} />
           <Route path="/" element={<Dashboard state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/teachers" element={<TeacherManagement state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/students" element={<StudentManagement state={state} updateState={updateState} user={currentUser} />} />
-          <Route path="/sync" element={<DataManagement state={state} updateState={setFullState} cloudStatus={cloudStatus} cloudError={cloudError} />} />
+          <Route path="/sync" element={<DataManagement state={state} updateState={setFullState} cloudStatus={cloudStatus} cloudError={cloudError} onRefresh={refreshFromCloud} />} />
           <Route path="/workbooks" element={<WorkbookManagement state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/classes" element={<ClassManagement state={state} updateState={updateState} user={currentUser} />} />
           <Route path="/learning" element={<LearningStatus state={state} updateState={updateState} user={currentUser} />} />
@@ -233,8 +256,12 @@ const App: React.FC = () => {
 };
 
 const CloudBadge = ({ status }: { status: 'OFFLINE' | 'CONNECTING' | 'LIVE' }) => (
-  <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold ${status === 'LIVE' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
-    <span>{status === 'LIVE' ? '● 실시간 연동됨' : '○ 연결 안됨'}</span>
+  <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${
+    status === 'LIVE' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 
+    status === 'CONNECTING' ? 'bg-amber-500 text-white animate-pulse' : 
+    'bg-rose-500 text-white'
+  }`}>
+    <span>{status === 'LIVE' ? '● 실시간 연동 중' : status === 'CONNECTING' ? '◌ 동기화 확인 중...' : '○ 오프라인 모드'}</span>
   </div>
 );
 

@@ -22,6 +22,11 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
   const today = new Date().toISOString().split('T')[0];
   const isDirector = user?.role === 'DIRECTOR';
 
+  // 선생님은 본인 학급만, 원장님은 모든 학급 열람 가능
+  const visibleClasses = isDirector 
+    ? (state.classes || []) 
+    : (state.classes || []).filter(c => c.teacherId === user?.id);
+
   const handleAddClass = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClassName) return;
@@ -99,7 +104,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">반 및 출석 관리</h2>
-          <p className="text-slate-500">학급별 공통 교재 및 수업 요일을 관리합니다.</p>
+          <p className="text-slate-500">{isDirector ? "학급별 공통 교재 및 수업 요일을 관리합니다." : "담당 학급의 출석 및 요일을 관리합니다."}</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
@@ -148,7 +153,7 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        {(state.classes || []).map(cls => {
+        {visibleClasses.map(cls => {
           const isExpanded = expandedClassId === cls.id;
           const classStudents = (state.students || []).filter(s => s.classId === cls.id);
           const presentCount = (state.attendance || []).filter(a => a.classId === cls.id && a.date === today && (a.status === 'PRESENT' || a.status === 'LATE')).length;
@@ -180,7 +185,6 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
               {isExpanded && (
                 <div className="px-6 pb-8 pt-4 border-t border-slate-50 bg-slate-50/20 animate-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* 왼쪽: 출석 관리 */}
                     <div className="lg:col-span-7">
                       <h5 className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4">DAILY ATTENDANCE LOG</h5>
                       <div className="space-y-2">
@@ -201,7 +205,6 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       </div>
                     </div>
 
-                    {/* 오른쪽: 요일 및 교재 관리 */}
                     <div className="lg:col-span-5 space-y-8">
                       {isDirector && (
                         <div>
@@ -262,6 +265,11 @@ const ClassManagement: React.FC<Props> = ({ state, updateState, user }) => {
             </div>
           );
         })}
+        {visibleClasses.length === 0 && (
+          <div className="py-20 text-center bg-white rounded-3xl border border-dashed border-slate-200">
+            <p className="text-slate-400 font-bold italic">조회 가능한 학급이 없습니다.</p>
+          </div>
+        )}
       </div>
     </div>
   );
