@@ -16,12 +16,22 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   const [summary, setSummary] = useState<{[key: string]: string}>({});
   const [isKeyValid, setIsKeyValid] = useState(true);
 
-  // 현재 API 키 연결 상태 확인
+  // 초기 로드 시 키 존재 여부 확인
   useEffect(() => {
     const checkKey = async () => {
+      // 1. process.env.API_KEY 확인 (Vercel 주입분)
+      const envKey = process.env.API_KEY;
+      if (envKey && envKey !== "undefined") {
+        setIsKeyValid(true);
+        return;
+      }
+
+      // 2. aistudio 환경 확인
       if ((window as any).aistudio?.hasSelectedApiKey) {
         const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-        setIsKeyValid(hasKey || !!process.env.API_KEY);
+        setIsKeyValid(hasKey);
+      } else {
+        setIsKeyValid(false);
       }
     };
     checkKey();
@@ -32,19 +42,12 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       await (window as any).aistudio.openSelectKey();
       setIsKeyValid(true);
     } else {
-      alert("이 환경에서는 API 키 선택기를 직접 지원하지 않습니다. Vercel 환경 변수를 다시 확인해 주세요.");
+      // AI Studio 환경이 아닐 경우 Vercel 설정을 확인하도록 안내
+      alert("Vercel 환경 변수 'API_KEY'가 설정되지 않았거나 인식되지 않았습니다. Vercel 배포 설정에서 환경 변수를 추가하고 다시 배포해 주세요.");
     }
   };
 
   const handleGenerateAISummary = async (sId: string) => {
-    // 키가 없는 경우 선택창 먼저 오픈 (레이스 컨디션 고려하여 바로 진행)
-    if ((window as any).aistudio?.hasSelectedApiKey) {
-      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
-      if (!hasKey && !process.env.API_KEY) {
-        await handleOpenKeySelector();
-      }
-    }
-
     const student = state.students.find(s => s.id === sId);
     if (!student) return;
 
@@ -62,14 +65,19 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       );
       
       setSummary(prev => ({ ...prev, [sId]: result }));
+      setIsKeyValid(true);
     } catch (error: any) {
       console.error("AI Summary Error:", error);
       if (error.message === "INVALID_API_KEY" || error.message === "API_KEY_MISSING") {
         setIsKeyValid(false);
-        alert("AI 서비스 연결에 문제가 있습니다. 다시 한번 키를 선택해 주세요.");
-        await handleOpenKeySelector();
+        // 사용자에게 키 선택 기회 제공 (지원 환경인 경우)
+        if ((window as any).aistudio) {
+          await handleOpenKeySelector();
+        } else {
+          alert("AI 서비스 연결에 실패했습니다. Vercel 대시보드에서 API_KEY가 올바르게 설정되었는지 확인해 주세요.");
+        }
       } else {
-        alert(`AI 브리핑 생성 중 오류가 발생했습니다: ${error.message}`);
+        alert(`AI 브리핑 생성 오류: ${error.message}`);
       }
     } finally {
       setIsSummarizing(null);
@@ -80,7 +88,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     const today = new Date().toLocaleDateString();
     const fullText = `[EduLog] ${studentName} 학생 리포트 (${today})\n\n${text}`;
     navigator.clipboard.writeText(fullText);
-    alert('카카오톡 전송용 리포트가 복사되었습니다!');
+    alert('카톡용 리포트가 복사되었습니다!');
   };
 
   const isDirector = user?.role === 'DIRECTOR';
@@ -101,7 +109,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
     };
     updateState(prev => ({ ...prev, consultations: [...prev.consultations, newRecord] }));
     setNote('');
-    alert('상담 기록이 저장되었습니다.');
+    alert('기록되었습니다.');
   };
 
   return (
@@ -109,28 +117,21 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">상담 일지 및 AI 브리핑</h2>
-          <p className="text-slate-500 text-sm">기록된 메모를 분석해 학부모님용 카톡 리포트를 생성합니다.</p>
+          <p className="text-slate-500 text-sm">기록된 메모를 분석해 학부모님용 카톡 리포트를 자동 생성합니다.</p>
         </div>
         
         <div className="flex flex-col items-end gap-1">
-          <button 
-            onClick={handleOpenKeySelector}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${
-              isKeyValid 
-              ? "bg-indigo-50 border-indigo-200 text-indigo-600" 
-              : "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
-            }`}
-          >
-            {isKeyValid ? "✅ AI 서비스 연결됨" : "🔑 AI 서비스 연결하기"}
-          </button>
-          <a 
-            href="https://ai.google.dev/gemini-api/docs/billing" 
-            target="_blank" 
-            rel="noreferrer"
-            className="text-[10px] text-slate-400 hover:underline px-2"
-          >
-            결제 및 요금 안내 확인 ↗
-          </a>
+          <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all border ${
+            isKeyValid 
+            ? "bg-emerald-50 border-emerald-200 text-emerald-600" 
+            : "bg-amber-50 border-amber-200 text-amber-600"
+          }`}>
+            {isKeyValid ? "✅ AI 엔진 정상 연결" : "⚠️ AI 설정 확인 필요"}
+            {!isKeyValid && (window as any).aistudio && (
+              <button onClick={handleOpenKeySelector} className="underline ml-2">키 선택</button>
+            )}
+          </div>
+          <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="text-[10px] text-slate-400 hover:underline px-2">결제/요금 안내 ↗</a>
         </div>
       </header>
 
@@ -160,7 +161,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                   value={note} 
                   onChange={e => setNote(e.target.value)} 
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 text-sm" 
-                  placeholder="예: 오늘 숙제 완성도가 매우 높았습니다. 어려운 응용 문제도 스스로 잘 해결해냈습니다." 
+                  placeholder="예: 오늘 숙제 완성도가 매우 높았습니다." 
                   required 
                 />
               </div>
@@ -176,12 +177,12 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
             <div key={student.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-md transition-all">
               <div className="p-4 bg-slate-50/50 border-b flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white border border-slate-200 text-indigo-600 flex items-center justify-center font-bold shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-white border border-slate-200 text-indigo-600 flex items-center justify-center font-bold">
                     {student.name[0]}
                   </div>
                   <div>
                     <span className="font-bold text-slate-800">{student.name}</span>
-                    <span className="ml-2 text-[10px] font-bold text-slate-400 uppercase">{student.grade}</span>
+                    <span className="ml-2 text-[10px] font-bold text-slate-400">{student.grade}</span>
                   </div>
                 </div>
                 
@@ -195,51 +196,37 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                       : "bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95"
                     }`}
                   >
-                    {isSummarizing === student.id ? (
-                      <span className="flex items-center gap-2">
-                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        생성 중...
-                      </span>
-                    ) : (
-                      <>✨ AI 카톡 브리핑</>
-                    )}
+                    {isSummarizing === student.id ? "작성 중..." : "✨ AI 브리핑 생성"}
                   </button>
                 )}
               </div>
               
               <div className="p-6">
-                {summary[student.id] ? (
+                {summary[student.id] && (
                   <div className="mb-6 bg-slate-900 text-slate-200 p-6 rounded-3xl relative shadow-2xl border border-slate-800 animate-in zoom-in duration-300">
                     <div className="flex justify-between items-center mb-6">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse"></span>
-                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">AI 추천 브리핑 (카톡용)</h4>
+                        <h4 className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">AI 추천 브리핑</h4>
                       </div>
                       <button 
                         onClick={() => handleCopyToKakao(student.name, summary[student.id])}
-                        className="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                        className="bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-lg"
                       >
-                        <span>📋 리포트 복사</span>
+                        📋 복사하기
                       </button>
                     </div>
                     <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium text-slate-300 bg-slate-800/50 p-5 rounded-2xl border border-slate-700/50">
                       {summary[student.id]}
                     </div>
                   </div>
-                ) : (
-                  isDirector && (
-                    <div className="mb-6 py-8 border-2 border-dashed border-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-300 text-center">
-                      <p className="text-xs font-bold">선생님들의 관찰 메모를 분석하여 AI가 상담 브리핑을 작성합니다.</p>
-                      {!isKeyValid && <p className="text-[10px] mt-2 text-rose-400 font-bold italic">※ 먼저 상단의 'AI 서비스 연결하기' 버튼을 눌러주세요.</p>}
-                    </div>
-                  )
                 )}
                 
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">최근 상담 기록</h4>
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">최근 관찰 내역</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {state.consultations.filter(c => c.studentId === student.id).length === 0 ? (
-                      <p className="text-xs text-slate-300 italic">기록된 상담 내용이 없습니다.</p>
+                      <p className="text-xs text-slate-300 italic">기록된 상담 소견이 없습니다.</p>
                     ) : (
                       state.consultations.filter(c => c.studentId === student.id).reverse().slice(0, 4).map(c => (
                         <div key={c.id} className="text-xs text-slate-600 bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
