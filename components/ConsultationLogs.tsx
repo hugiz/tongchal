@@ -128,7 +128,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
 
   const handleAddOrUpdateParentConsultation = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStudentId || !consultContent || !isDirector) return;
+    if (!activeStudentId || !consultContent || !user) return;
 
     if (editingParentConsultId) {
       updateState(prev => ({
@@ -143,13 +143,14 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
       const newRecord: ParentConsultationRecord = {
         id: 'pc' + Date.now(),
         studentId: activeStudentId,
+        teacherId: user.id,
         type: consultType,
         content: consultContent,
         result: consultResult,
         date: new Date().toISOString().split('T')[0]
       };
       updateState(prev => ({ ...prev, parentConsultations: [...(prev.parentConsultations || []), newRecord] }));
-      alert('학부모 심층 상담 기록 완료');
+      alert('심층 상담 기록 완료');
     }
     setConsultContent('');
     setConsultResult('');
@@ -179,12 +180,19 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
   const myStudents = state.students.filter(s => teacherClasses.map(c => c.id).includes(s.classId));
   const currentBriefing = state.briefings?.find(b => b.studentId === activeStudentId);
 
+  // 학부모 심층 상담 목록 필터링 (원장은 모두, 교사는 본인 것만)
+  const visibleParentConsultations = (state.parentConsultations || []).filter(c => {
+    const isForActiveStudent = c.studentId === activeStudentId;
+    if (!isForActiveStudent) return false;
+    return isDirector || c.teacherId === user?.id;
+  });
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">상담 및 관찰 일지</h2>
-          <p className="text-slate-500 text-sm">{isDirector ? "학생별 관찰 메모와 학부모 심층 상담을 관리합니다." : "담당 학급 학생들의 관찰 메모를 관리합니다."}</p>
+          <p className="text-slate-500 text-sm">{isDirector ? "학생별 관찰 메모와 학부모 심층 상담을 관리합니다." : "담당 학급 학생들의 관찰 메모와 본인의 상담 일지를 관리합니다."}</p>
         </div>
         <div className={`px-4 py-2 rounded-2xl text-[10px] font-black border ${isKeyValid ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"}`}>
           {isKeyValid ? "● AI 엔진 활성화됨" : "○ AI 설정 필요"}
@@ -216,7 +224,7 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
               {/* 탭 헤더 */}
               <div className="flex border-b border-slate-50">
                 <button onClick={() => setViewTab('OBSERVATION')} className={`flex-1 py-4 text-xs font-black transition-all ${viewTab === 'OBSERVATION' ? "text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50/30" : "text-slate-400 hover:text-slate-600"}`}>관찰 메모 및 AI 리포트</button>
-                <button onClick={() => setViewTab('PARENT_CONSULT')} className={`flex-1 py-4 text-xs font-black transition-all ${viewTab === 'PARENT_CONSULT' ? "text-rose-600 border-b-2 border-rose-600 bg-rose-50/30" : "text-slate-400 hover:text-slate-600"}`}>학부모 심층 상담 {isDirector && "⭐"}</button>
+                <button onClick={() => setViewTab('PARENT_CONSULT')} className={`flex-1 py-4 text-xs font-black transition-all ${viewTab === 'PARENT_CONSULT' ? "text-rose-600 border-b-2 border-rose-600 bg-rose-50/30" : "text-slate-400 hover:text-slate-600"}`}>학부모 심층 상담</button>
               </div>
 
               <div className="p-8">
@@ -281,59 +289,59 @@ const ConsultationLogs: React.FC<Props> = ({ state, updateState, user }) => {
                       {editingParentConsultId ? "심층 상담 수정 중" : "학부모 심층 상담 관리"}
                     </h4>
 
-                    {isDirector ? (
-                      <form onSubmit={handleAddOrUpdateParentConsultation} className={`p-6 rounded-[28px] border space-y-4 transition-all ${editingParentConsultId ? 'bg-amber-50 border-amber-200 ring-4 ring-amber-50' : 'bg-rose-50/50 border-rose-100'}`}>
-                        <div className="flex flex-wrap gap-2">
-                          {(['PHONE', 'VISIT', 'MESSAGE', 'OTHER'] as ConsultationType[]).map(t => (
-                            <button key={t} type="button" onClick={() => setConsultType(t)} className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${consultType === t ? "bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-200" : "bg-white text-slate-400 border-slate-200 hover:bg-slate-50"}`}>
-                              {t === 'PHONE' ? '📞 전화' : t === 'VISIT' ? '🏫 방문' : t === 'MESSAGE' ? '✉️ 문자' : '📎 기타'}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea value={consultContent} onChange={e => setConsultContent(e.target.value)} placeholder="상담한 주요 내용을 입력하세요." rows={3} className="w-full p-4 rounded-2xl border border-rose-100 outline-none text-xs font-medium focus:ring-4 focus:ring-rose-500/5" required />
-                        <input value={consultResult} onChange={e => setConsultResult(e.target.value)} placeholder="상담 결과 (진급 결정, 교재 변경 등)" className="w-full p-4 rounded-2xl border border-rose-100 outline-none text-xs font-medium focus:ring-4 focus:ring-rose-500/5" />
-                        <div className="flex gap-2">
-                          {editingParentConsultId && (
-                            <button type="button" onClick={() => { setEditingParentConsultId(null); setConsultContent(''); setConsultResult(''); }} className="flex-1 bg-slate-200 text-slate-600 py-3 rounded-2xl text-[11px] font-black hover:bg-slate-300 transition-all">수정 취소</button>
-                          )}
-                          <button type="submit" className={`flex-[2] text-white py-3 rounded-2xl text-[11px] font-black shadow-lg transition-all ${editingParentConsultId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
-                            {editingParentConsultId ? '기록 수정 완료' : '상담 기록 저장'}
+                    <form onSubmit={handleAddOrUpdateParentConsultation} className={`p-6 rounded-[28px] border space-y-4 transition-all ${editingParentConsultId ? 'bg-amber-50 border-amber-200 ring-4 ring-amber-50' : 'bg-rose-50/50 border-rose-100'}`}>
+                      <div className="flex flex-wrap gap-2">
+                        {(['PHONE', 'VISIT', 'MESSAGE', 'OTHER'] as ConsultationType[]).map(t => (
+                          <button key={t} type="button" onClick={() => setConsultType(t)} className={`px-4 py-2 rounded-xl text-[10px] font-black border transition-all ${consultType === t ? "bg-rose-600 text-white border-rose-600 shadow-md shadow-rose-200" : "bg-white text-slate-400 border-slate-200 hover:bg-slate-50"}`}>
+                            {t === 'PHONE' ? '📞 전화' : t === 'VISIT' ? '🏫 방문' : t === 'MESSAGE' ? '✉️ 문자' : '📎 기타'}
                           </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <div className="p-6 bg-slate-50 rounded-2xl text-center border border-dashed border-slate-200">
-                        <p className="text-xs text-slate-400 font-bold italic">학부모 심층 상담은 원장님 전용 메뉴입니다.</p>
+                        ))}
                       </div>
-                    )}
+                      <textarea value={consultContent} onChange={e => setConsultContent(e.target.value)} placeholder="상담한 주요 내용을 입력하세요." rows={3} className="w-full p-4 rounded-2xl border border-rose-100 outline-none text-xs font-medium focus:ring-4 focus:ring-rose-500/5" required />
+                      <input value={consultResult} onChange={e => setConsultResult(e.target.value)} placeholder="상담 결과 (진급 결정, 교재 변경 등)" className="w-full p-4 rounded-2xl border border-rose-100 outline-none text-xs font-medium focus:ring-4 focus:ring-rose-500/5" />
+                      <div className="flex gap-2">
+                        {editingParentConsultId && (
+                          <button type="button" onClick={() => { setEditingParentConsultId(null); setConsultContent(''); setConsultResult(''); }} className="flex-1 bg-slate-200 text-slate-600 py-3 rounded-2xl text-[11px] font-black hover:bg-slate-300 transition-all">수정 취소</button>
+                        )}
+                        <button type="submit" className={`flex-[2] text-white py-3 rounded-2xl text-[11px] font-black shadow-lg transition-all ${editingParentConsultId ? 'bg-amber-600 hover:bg-amber-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
+                          {editingParentConsultId ? '기록 수정 완료' : '상담 기록 저장'}
+                        </button>
+                      </div>
+                    </form>
 
                     <div className="space-y-4">
-                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">누적 상담 히스토리</h5>
+                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {isDirector ? '누적 상담 히스토리' : '나의 상담 기록'}
+                      </h5>
                       <div className="space-y-3">
-                        {(state.parentConsultations || []).filter(c => c.studentId === activeStudentId).reverse().map(c => (
-                          <div key={c.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm relative group/parent">
-                            {isDirector && (
+                        {visibleParentConsultations.reverse().map(c => {
+                          const author = state.users.find(u => u.id === c.teacherId);
+                          return (
+                            <div key={c.id} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm relative group/parent">
                               <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover/parent:opacity-100 transition-all">
                                 <button onClick={() => startEditParentConsultation(c)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-100" title="수정">✏️</button>
                                 <button onClick={() => handleDeleteParentConsultation(c.id)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 border border-slate-100" title="삭제">🗑️</button>
                               </div>
-                            )}
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black text-white ${c.type === 'PHONE' ? 'bg-indigo-500' : c.type === 'VISIT' ? 'bg-emerald-500' : 'bg-slate-600'}`}>
-                                {c.type === 'PHONE' ? '전화 상담' : c.type === 'VISIT' ? '대면 상담' : c.type === 'MESSAGE' ? '문자 상담' : '기타 상담'}
-                              </span>
-                              <span className="text-[10px] font-black text-slate-400">{c.date}</span>
-                            </div>
-                            <p className="text-xs text-slate-700 font-bold leading-relaxed mb-3">{c.content}</p>
-                            {c.result && (
-                              <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                                <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">상담 결과/피드백</p>
-                                <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{c.result}</p>
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black text-white ${c.type === 'PHONE' ? 'bg-indigo-500' : c.type === 'VISIT' ? 'bg-emerald-500' : 'bg-slate-600'}`}>
+                                  {c.type === 'PHONE' ? '전화 상담' : c.type === 'VISIT' ? '대면 상담' : c.type === 'MESSAGE' ? '문자 상담' : '기타 상담'}
+                                </span>
+                                <span className="text-[10px] font-black text-slate-400">{c.date}</span>
+                                {isDirector && author && (
+                                  <span className="text-[10px] font-black text-indigo-400 ml-auto bg-indigo-50 px-2 py-0.5 rounded-md">작성: {author.name}</span>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                        {(state.parentConsultations || []).filter(c => c.studentId === activeStudentId).length === 0 && (
+                              <p className="text-xs text-slate-700 font-bold leading-relaxed mb-3">{c.content}</p>
+                              {c.result && (
+                                <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">상담 결과/피드백</p>
+                                  <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{c.result}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {visibleParentConsultations.length === 0 && (
                           <p className="text-center py-10 text-xs text-slate-300 font-bold italic">등록된 심층 상담 기록이 없습니다.</p>
                         )}
                       </div>

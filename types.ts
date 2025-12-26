@@ -55,6 +55,7 @@ export interface ConsultationRecord {
 export interface ParentConsultationRecord {
   id: string;
   studentId: string;
+  teacherId: string;
   type: ConsultationType;
   content: string;
   result: string;

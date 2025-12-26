@@ -44,6 +44,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
     .filter(b => visibleStudentIds.includes(b.studentId))
     .slice(0, 3);
 
+  // 최근 학생 관찰 메모 (최대 3개)
+  const recentObservations = (state.consultations || [])
+    .filter(c => visibleStudentIds.includes(c.studentId))
+    .slice(-3)
+    .reverse();
+
   const gradeData = visibleStudents.reduce((acc: any[], s) => {
     const existing = acc.find(item => item.name === s.grade);
     if (existing) { existing.value += 1; } 
@@ -241,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
             </div>
           </div>
 
-          {/* 최근 상담 브리핑 (New) */}
+          {/* 최근 상담 브리핑 */}
           <div className="bg-violet-50 p-8 rounded-[40px] border border-violet-100 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
               <span className="text-4xl">✨</span>
@@ -267,6 +273,37 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
               })}
               {recentBriefings.length === 0 && (
                 <p className="text-[11px] text-slate-400 italic text-center py-4 font-bold">생성된 AI 브리핑이 없습니다.</p>
+              )}
+            </div>
+          </div>
+
+          {/* 최근 학생 관찰 메모 (New) */}
+          <div className="bg-slate-100 p-8 rounded-[40px] border border-slate-200 shadow-sm">
+            <h3 className="text-xs font-black mb-6 text-slate-600 uppercase tracking-widest flex items-center justify-between">
+              최근 학생 관찰 메모
+              <button onClick={() => navigate('/consultation')} className="text-[9px] bg-slate-600 text-white px-2 py-0.5 rounded-lg hover:bg-slate-700 transition-colors">더보기</button>
+            </h3>
+            <div className="space-y-3">
+              {recentObservations.map(c => {
+                const s = state.students.find(student => student.id === c.studentId);
+                const teacher = state.users.find(u => u.id === c.teacherId);
+                return (
+                  <div key={c.id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-black text-slate-800">{s?.name}</p>
+                        <span className="text-[8px] bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-md font-black">{teacher?.name}T</span>
+                      </div>
+                      <span className="text-[9px] text-slate-400 font-bold">{c.date}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-600 line-clamp-2 leading-relaxed font-medium">
+                      {c.note}
+                    </p>
+                  </div>
+                );
+              })}
+              {recentObservations.length === 0 && (
+                <p className="text-[11px] text-slate-400 italic text-center py-4 font-bold">기록된 관찰 메모가 없습니다.</p>
               )}
             </div>
           </div>
