@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { ConsultationRecord, ProgressRecord, Student, Workbook } from "../types";
 
@@ -8,13 +7,8 @@ export const generateConsultationSummary = async (
   workbooks: Workbook[],
   consultations: ConsultationRecord[]
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("API_KEY_MISSING");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  // Use process.env.API_KEY directly as per SDK requirements
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const progressText = progress.length > 0 
     ? progress.map(p => {
@@ -54,15 +48,17 @@ export const generateConsultationSummary = async (
   `;
 
   try {
+    // Correctly structured generateContent call following guidelines
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [{ parts: [{ text: userPrompt }] }],
+      contents: userPrompt,
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.4,
       }
     });
     
+    // access .text property directly
     if (!response.text) throw new Error("AI response is empty");
     return response.text.trim();
   } catch (error: any) {

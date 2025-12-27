@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppState, User, AttendanceStatus, ProgressRecord, ConsultationRecord } from '../types';
+import { AppState, User, AttendanceStatus, ProgressRecord } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface DashboardProps {
   state: AppState;
@@ -11,6 +10,8 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
+  // Use the useNavigate hook to initialize the navigate function
+  const navigate = useNavigate();
   const [activeActionClass, setActiveActionClass] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'ATTENDANCE' | 'LEARNING' | 'CONSULTATION'>('ATTENDANCE');
 
@@ -20,28 +21,42 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
 
   const isDirector = user?.role === 'DIRECTOR';
 
-  // 모든 데이터 접근 시 기본값 [] 설정하여 에러 방지
-  const students = state.students || [];
-  const classes = state.classes || [];
-  const attendance = state.attendance || [];
-  const makeups = state.makeups || [];
-  const briefings = state.briefings || [];
-  const consultations = state.consultations || [];
+  // 6가지 지표 계산 - useMemo를 사용하여 데이터가 바뀔 때만 재계산 및 즉각 반영
+  const stats = useMemo(() => {
+    const students = state.students || [];
+    const classes = state.classes || [];
+    const attendance = state.attendance || [];
+    const makeups = state.makeups || [];
+    const briefings = state.briefings || [];
+    const consultations = state.consultations || [];
 
-  const visibleClasses = isDirector 
-    ? classes 
-    : classes.filter(c => c.teacherId === user?.id);
-  
-  const visibleClassIds = visibleClasses.map(c => c.id);
-  const visibleStudents = students.filter(s => visibleClassIds.includes(s.classId));
-  const visibleStudentIds = visibleStudents.map(s => s.id);
+    const visibleClasses = isDirector 
+      ? classes 
+      : classes.filter(c => c.teacherId === user?.id);
+    
+    const visibleClassIds = visibleClasses.map(c => c.id);
+    const visibleStudents = students.filter(s => visibleClassIds.includes(s.classId));
+    const visibleStudentIds = visibleStudents.map(s => s.id);
 
-  // 6가지 핵심 지표 계산 (상태 변화 즉시 반영)
-  const expectedCount = visibleStudents.filter(s => (s.attendanceDays || []).includes(dayName)).length;
-  const presentCount = attendance.filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId)).length;
-  const makeupCount = makeups.filter(m => m.makeupDate === today && visibleStudentIds.includes(m.studentId)).length;
-  const briefingCount = briefings.filter(b => visibleStudentIds.includes(b.studentId)).length;
-  const observationCount = consultations.filter(c => visibleStudentIds.includes(c.studentId)).length;
+    const expectedCount = visibleStudents.filter(s => (s.attendanceDays || []).includes(dayName)).length;
+    const presentCount = attendance.filter(a => a.date === today && (a.status === 'PRESENT' || a.status === 'LATE') && visibleStudentIds.includes(a.studentId)).length;
+    const makeupCount = makeups.filter(m => m.makeupDate === today && visibleStudentIds.includes(m.studentId)).length;
+    const briefingCount = briefings.filter(b => visibleStudentIds.includes(b.studentId)).length;
+    const observationCount = consultations.filter(c => visibleStudentIds.includes(c.studentId)).length;
+
+    return {
+      studentTotal: visibleStudents.length,
+      classTotal: visibleClasses.length,
+      attendanceRate: `${presentCount}/${expectedCount}`,
+      makeupTotal: makeupCount,
+      briefingTotal: briefingCount,
+      observationTotal: observationCount,
+      visibleClasses,
+      visibleStudents,
+      attendance,
+      visibleStudentIds
+    };
+  }, [state, isDirector, user, today, dayName]);
 
   const handleAttendance = (studentId: string, classId: string, status: AttendanceStatus) => {
     updateState(prev => {
@@ -84,14 +99,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
         </div>
       </header>
 
-      {/* 6가지 핵심 지표 카드 */}
+      {/* 6가지 핵심 지표 카드 - 실시간 변화 반영 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <StatCard title="원생" value={visibleStudents.length} icon="👥" color="bg-indigo-600" />
-        <StatCard title="학급" value={visibleClasses.length} icon="🏫" color="bg-emerald-600" />
-        <StatCard title="출석" value={`${presentCount}/${expectedCount}`} icon="✅" color="bg-amber-500" />
-        <StatCard title="보강" value={makeupCount} icon="🩹" color="bg-rose-500" />
-        <StatCard title="브리핑" value={briefingCount} icon="✨" color="bg-violet-600" />
-        <StatCard title="관찰" value={observationCount} icon="📝" color="bg-slate-700" />
+        <StatCard title="원생" value={stats.studentTotal} icon="👥" color="bg-indigo-600" />
+        <StatCard title="학급" value={stats.classTotal} icon="🏫" color="bg-emerald-600" />
+        <StatCard title="출석" value={stats.attendanceRate} icon="✅" color="bg-amber-500" />
+        <StatCard title="보강" value={stats.makeupTotal} icon="🩹" color="bg-rose-500" />
+        <StatCard title="브리핑" value={stats.briefingTotal} icon="✨" color="bg-violet-600" />
+        <StatCard title="관찰" value={stats.observationTotal} icon="📝" color="bg-slate-700" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -102,10 +117,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleClasses.map(cls => {
+            {stats.visibleClasses.map(cls => {
               const isSelected = activeActionClass === cls.id;
               const isClassToday = (cls.attendanceDays || []).includes(dayName);
-              const classStudents = visibleStudents.filter(s => s.classId === cls.id);
+              const classStudents = stats.visibleStudents.filter(s => s.classId === cls.id);
 
               return (
                 <div key={cls.id} className={`bg-white rounded-[32px] border transition-all ${isSelected ? 'border-indigo-500 shadow-2xl ring-4 ring-indigo-50' : isClassToday ? 'border-amber-200 bg-amber-50/50' : 'border-slate-100 hover:shadow-xl'}`}>
@@ -131,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                           {activeTab === 'ATTENDANCE' && (
                             <div className="flex gap-1">
                               {['PRESENT', 'LATE', 'ABSENT'].map(status => {
-                                const att = attendance.find(a => a.studentId === student.id && a.date === today);
+                                const att = stats.attendance.find(a => a.studentId === student.id && a.date === today);
                                 return (
                                   <button key={status} onClick={() => handleAttendance(student.id, cls.id, status as AttendanceStatus)} className={`px-2 py-1.5 rounded-xl text-[9px] font-black ${att?.status === status ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-400'}`}>
                                     {status === 'PRESENT' ? '출석' : status === 'LATE' ? '지각' : '결석'}
@@ -143,6 +158,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
                           {activeTab === 'LEARNING' && (
                              <input type="number" placeholder="P" className="w-12 px-2 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-right outline-none" onKeyDown={(e) => { if(e.key === 'Enter') { handleUpdateProgress(student.id, e.currentTarget.value); e.currentTarget.value = ''; alert('저장됨'); } }} />
                           )}
+                          {activeTab === 'CONSULTATION' && (
+                             <button onClick={() => navigate('/consultation')} className="text-[10px] font-black text-rose-500 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-100">일지 작성</button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -153,12 +171,17 @@ const Dashboard: React.FC<DashboardProps> = ({ state, updateState, user }) => {
           </div>
         </div>
       </div>
+      
+      {/* 빌드 성공 확인용 푸터 */}
+      <footer className="pt-10 text-center">
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">EduLog System Ready • Last Update: 12.27 10:30</p>
+      </footer>
     </div>
   );
 };
 
 const StatCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: string, color: string }) => (
-  <div className="bg-white p-5 rounded-[32px] shadow-sm border border-slate-100 flex items-center space-x-3 transition-transform hover:scale-105">
+  <div className="bg-white p-5 rounded-[32px] shadow-sm border border-slate-100 flex items-center space-x-3 transition-transform hover:scale-105 active:scale-95">
     <div className={`w-10 h-10 rounded-2xl ${color} text-white flex items-center justify-center text-lg shadow-lg`}>{icon}</div>
     <div>
       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{title}</p>
