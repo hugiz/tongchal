@@ -20,8 +20,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('edulog_state');
     if (!saved) return INITIAL_STATE;
     try {
-      const parsed = JSON.parse(saved);
-      return { ...INITIAL_STATE, ...parsed };
+      return { ...INITIAL_STATE, ...JSON.parse(saved) };
     } catch (e) {
       return INITIAL_STATE;
     }
@@ -41,6 +40,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 클라우드 데이터 가져오기 (메모이제이션)
   const refreshFromCloud = useCallback(async () => {
     if (!supabaseRef.current) return;
     try {
@@ -57,52 +57,39 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // 클라우드 연결 설정
   useEffect(() => {
     const url = localStorage.getItem('edulog_cloud_url');
     const key = localStorage.getItem('edulog_cloud_key');
 
     if (url && key) {
-      const connectCloud = async () => {
-        try {
-          setCloudStatus('CONNECTING');
-          const client = createClient(url, key);
-          supabaseRef.current = client;
-
-          const { data, error } = await client.from('app_sync').select('data').eq('id', 'global_state').single();
-          
-          if (error && error.code !== 'PGRST116') {
-            setCloudError(`클라우드 오류: ${error.message}`);
-            setCloudStatus('OFFLINE');
-          } else if (data?.data) {
-            setState(data.data);
-            setCloudStatus('LIVE');
-          }
-          
-          isInitialFetch.current = false;
-
-          client
-            .channel('global-changes')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync', filter: 'id=eq.global_state' }, (payload) => {
-              if (payload.new?.data) {
-                setState(payload.new.data);
-              }
-            })
-            .subscribe();
-        } catch (err: any) {
-          setCloudStatus('OFFLINE');
-        }
-      };
-      connectCloud();
+      const client = createClient(url, key);
+      supabaseRef.current = client;
+      
+      refreshFromCloud().then(() => {
+        isInitialFetch.current = false;
+        
+        client.channel('global-changes')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_sync', filter: 'id=eq.global_state' }, (payload) => {
+            if (payload.new?.data) {
+              setState(payload.new.data);
+            }
+          })
+          .subscribe();
+      });
     }
-  }, []);
+  }, [refreshFromCloud]);
 
+  // 로컬 스토리지 및 클라우드 푸시 (디바운싱 고려)
   useEffect(() => {
     localStorage.setItem('edulog_state', JSON.stringify(state));
+    
     if (!isInitialFetch.current && cloudStatus === 'LIVE' && supabaseRef.current) {
-      supabaseRef.current.from('app_sync').upsert({ id: 'global_state', data: state })
-        .then(({ error }) => {
-          if (error) console.error('Push failed', error);
-        });
+      const timer = setTimeout(() => {
+        supabaseRef.current!.from('app_sync').upsert({ id: 'global_state', data: state })
+          .catch(err => console.error('Cloud Push Error:', err));
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [state, cloudStatus]);
 
@@ -119,12 +106,13 @@ const App: React.FC = () => {
     navigate('/login');
   };
 
-  const updateState = (updater: (prev: AppState) => AppState) => {
+  // 통합 상태 업데이트 함수
+  const updateState = useCallback((updater: (prev: AppState) => AppState) => {
     setState(prev => {
       const newState = updater(prev);
       return newState;
     });
-  };
+  }, []);
 
   if (!currentUser && location.pathname !== '/login') {
     return <Login onLogin={handleLogin} users={state.users} />;
@@ -135,7 +123,7 @@ const App: React.FC = () => {
   const sidebarName = currentUser?.name || '';
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 overflow-hidden">
       {currentUser && (
         <button 
           onClick={() => setIsMenuOpen(true)}
@@ -164,7 +152,7 @@ const App: React.FC = () => {
               <div className="mt-4"><CloudBadge status={cloudStatus} /></div>
             </div>
             
-            <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto scrollbar-hide">
               <SidebarItem to="/" icon="📊" label="대시보드" active={location.pathname === '/'} onClick={() => setIsMenuOpen(false)} />
               {isDirector && (
                 <>
