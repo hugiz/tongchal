@@ -1,13 +1,11 @@
-
 import { AppState, Role } from './types';
 
 export const DAYS_OF_WEEK = ['월', '화', '수', '목', '금', '토', '일'];
 
 export const INITIAL_STATE: AppState = {
   users: [
-    { id: '1', username: 'admin', password: '1234', name: '통찰수학 원장', role: 'DIRECTOR' },
-    { id: '2', username: 'teacher1', password: 'teacher1', name: '이선생', role: 'TEACHER' },
-    { id: '3', username: 'teacher2', password: 'teacher2', name: '박선생', role: 'TEACHER' },
+    // 원장님 요청으로 admin/1234를 삭제하고 새로운 정보로 설정
+    { id: 'director_01', username: 'director', password: 'insight123', name: '통찰수학 원장', role: 'DIRECTOR' },
   ],
   students: [
     { id: 's1', name: '홍길동', grade: '초등 5', classId: 'c1', workbooks: ['w1', 'w2'], attendanceDays: ['월', '수', '금'] },
@@ -15,8 +13,8 @@ export const INITIAL_STATE: AppState = {
     { id: 's3', name: '김철수', grade: '중등 1', classId: 'c2', workbooks: ['w3'], attendanceDays: ['화', '목'] },
   ],
   classes: [
-    { id: 'c1', name: 'A반 (기초)', teacherId: '2', workbooks: ['w1'], attendanceDays: ['월', '수', '금'] },
-    { id: 'c2', name: 'B반 (심화)', teacherId: '3', workbooks: ['w3'], attendanceDays: ['화', '목'] },
+    { id: 'c1', name: 'A반 (기초)', teacherId: 'director_01', workbooks: ['w1'], attendanceDays: ['월', '수', '금'] },
+    { id: 'c2', name: 'B반 (심화)', teacherId: 'director_01', workbooks: ['w3'], attendanceDays: ['화', '목'] },
   ],
   workbooks: [
     { id: 'w1', title: '디딤돌 수학 기본', totalPages: 160 },

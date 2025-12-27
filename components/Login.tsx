@@ -68,7 +68,7 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
           >
             로그인하기
           </button>
-          <p className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">EduLog v1.0 • 통찰수학학원 전용</p>
+          <p className="text-center text-[10px] text-slate-300 font-bold uppercase tracking-widest pt-4">EduLog v1.2 • 보안 접속 시스템</p>
         </form>
       </div>
     </div>
