@@ -26,7 +26,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       return;
     }
 
-    const isExist = state.users.some(u => u.username === username);
+    const isExist = (state.users || []).some(u => u.username === username);
     if (isExist) {
       alert('이미 등록된 아이디입니다.');
       return;
@@ -42,7 +42,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
 
     updateState(prev => ({ 
       ...prev, 
-      users: [...prev.users, newTeacher] 
+      users: [...(prev.users || []), newTeacher] 
     }));
 
     setName('');
@@ -56,7 +56,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
     if (confirm(`${teacherName} 선생님의 비밀번호를 "1234"로 초기화하시겠습니까?`)) {
       updateState(prev => ({
         ...prev,
-        users: prev.users.map(u => u.id === teacherId ? { ...u, password: '1234' } : u)
+        users: (prev.users || []).map(u => u.id === teacherId ? { ...u, password: '1234' } : u)
       }));
       alert('비밀번호가 1234로 초기화되었습니다.');
     }
@@ -66,7 +66,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
     if (confirm(`${teacherName} 선생님을 삭제하시겠습니까?`)) {
       updateState(prev => ({
         ...prev,
-        users: prev.users.filter(u => u.id !== teacherId)
+        users: (prev.users || []).filter(u => u.id !== teacherId)
       }));
     }
   };
@@ -76,7 +76,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">선생님 계정 관리</h2>
-          <p className="text-slate-500 text-sm font-medium">학원 선생님들의 접속 정보를 할당하고 관리합니다.</p>
+          <p className="text-slate-500 text-sm font-medium">선생님들의 접속 아이디와 정보를 관리합니다.</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
@@ -106,7 +106,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {state.users.filter(u => u.role === 'TEACHER' || u.role === 'DIRECTOR').map(teacher => {
+        {(state.users || []).filter(u => u.role === 'TEACHER' || u.role === 'DIRECTOR').map(teacher => {
           const isExpanded = activeTeacherId === teacher.id;
           const isMe = teacher.id === user?.id;
           
@@ -120,7 +120,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm ${isExpanded ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                      {teacher.name[0]}
+                      {teacher.name[0] || 'T'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
