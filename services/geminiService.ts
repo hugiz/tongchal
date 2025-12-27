@@ -7,7 +7,7 @@ export const generateConsultationSummary = async (
   workbooks: Workbook[],
   consultations: ConsultationRecord[]
 ): Promise<string> => {
-  // Use process.env.API_KEY directly as per SDK requirements
+  // process.env.API_KEY를 직접 사용하여 SDK 가이드라인 준수
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const progressText = progress.length > 0 
@@ -48,7 +48,6 @@ export const generateConsultationSummary = async (
   `;
 
   try {
-    // Correctly structured generateContent call following guidelines
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: userPrompt,
@@ -58,9 +57,10 @@ export const generateConsultationSummary = async (
       }
     });
     
-    // access .text property directly
-    if (!response.text) throw new Error("AI response is empty");
-    return response.text.trim();
+    // .text 속성을 직접 호출 (text() 메소드 아님)
+    const resultText = response.text;
+    if (!resultText) throw new Error("AI response is empty");
+    return resultText.trim();
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     if (error.message?.includes("404")) {
