@@ -71,28 +71,12 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
     }
   };
 
-  // 담당 학생 수 집계 로직 강화
-  const getTeacherStats = (teacherId: string) => {
-    // 1. 해당 선생님이 맡은 모든 반을 찾습니다.
-    const teacherClasses = state.classes.filter(c => c.teacherId === teacherId);
-    const classIds = teacherClasses.map(c => c.id);
-    
-    // 2. 그 반들에 소속된 학생들을 중복 없이 집계합니다.
-    const teacherStudents = state.students.filter(s => classIds.includes(s.classId));
-    
-    return {
-      classCount: teacherClasses.length,
-      studentCount: teacherStudents.length,
-      classNames: teacherClasses.map(c => c.name)
-    };
-  };
-
   return (
     <div className="space-y-6 pb-20">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">선생님 및 계정 관리</h2>
-          <p className="text-slate-500 text-sm font-medium">선생님별 담당 학생 수와 접속 정보를 관리합니다.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">선생님 계정 관리</h2>
+          <p className="text-slate-500 text-sm font-medium">선생님들의 접속 정보를 관리합니다.</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
@@ -124,7 +108,6 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {state.users.filter(u => u.role === 'TEACHER' || u.role === 'DIRECTOR').map(teacher => {
           const isExpanded = activeTeacherId === teacher.id;
-          const stats = getTeacherStats(teacher.id);
           const isMe = teacher.id === user?.id;
           
           return (
@@ -134,7 +117,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
               onClick={() => setActiveTeacherId(isExpanded ? null : teacher.id)}
             >
               <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-sm ${isExpanded ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
                       {teacher.name[0]}
@@ -149,24 +132,10 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
                       <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ID: {teacher.username}</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">담당 학생</p>
-                    <p className="text-xl font-black text-indigo-600">{stats.studentCount}명</p>
-                  </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-slate-50 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                    <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">담당 학급 ({stats.classCount}개)</p>
-                      <div className="flex flex-wrap gap-1">
-                        {stats.classNames.map((cn, i) => (
-                          <span key={i} className="text-[9px] bg-white border border-slate-200 px-2 py-1 rounded-lg font-bold text-slate-500">🏫 {cn}</span>
-                        ))}
-                        {stats.classCount === 0 && <span className="text-[9px] text-slate-300 italic">배정된 반 없음</span>}
-                      </div>
-                    </div>
-
+                  <div className="mt-6 pt-4 border-t border-slate-50 space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="flex gap-2">
                       {isDirector && teacher.id !== user?.id && (
                         <>
