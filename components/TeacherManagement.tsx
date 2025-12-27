@@ -76,7 +76,7 @@ const TeacherManagement: React.FC<Props> = ({ state, updateState, user }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">선생님 계정 관리</h2>
-          <p className="text-slate-500 text-sm font-medium">선생님들의 접속 정보를 관리합니다.</p>
+          <p className="text-slate-500 text-sm font-medium">선생님들의 접속 아이디와 비밀번호를 관리합니다.</p>
         </div>
         {isDirector && (
           <button onClick={() => setIsAdding(!isAdding)} className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-black text-xs shadow-lg hover:bg-indigo-700 transition-all active:scale-95">
